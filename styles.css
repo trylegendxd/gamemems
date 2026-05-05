@@ -1,8 +1,0 @@
-:root { color-scheme: dark; }
-body { margin: 0; background: #16120f; color: #f2e0c5; font-family: system-ui, sans-serif; display:flex; flex-direction:column; align-items:center; }
-#game { border: 2px solid #88653b; box-shadow: 0 0 30px #000; margin-top: 8px; cursor: crosshair; max-width:95vw; height:auto; }
-#hud { width:min(1200px,95vw); display:grid; grid-template-columns:2fr 2fr 3fr; gap:12px; margin-top:10px; }
-#hud > div { background:#231a13; border:1px solid #5b4327; padding:8px; min-height:42px; }
-#controls { margin:10px; opacity:0.9; font-size:14px; }
-.warning { color:#ff9d7a; }
-.good { color:#a8ff9b; }
