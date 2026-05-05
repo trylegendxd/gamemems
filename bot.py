@@ -37,6 +37,8 @@ class Listing:
     source: str
     location: str = ""
     raw_text: str = ""
+    image_url: str = ""
+    description: str = ""
 
 
 @dataclass
@@ -304,11 +306,23 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _use_db_seen() -> bool:
+    """Use the database for seen-tracking when DATABASE_URL is set (Render)."""
+    return bool(os.getenv("DATABASE_URL", "").strip())
+
+
 def load_seen() -> Dict[str, Dict]:
     """
-    Returns a dict {url: {"first": iso, "price": float, "min_price": float}}.
-    Migrates legacy list format (just URLs) so pre-existing seen.json works.
+    Returns a dict {url: {"first": iso, "price": float, "alerted_price": float,
+    "alerted_at": iso}}. On Render the canonical store is the DB; locally we
+    keep using seen.json for zero-config dev.
     """
+    if _use_db_seen():
+        try:
+            from db import load_seen_dict
+            return load_seen_dict()
+        except Exception as e:
+            print(f"[WARN] DB seen load failed, falling back to file: {e}")
     if not SEEN_FILE.exists():
         return {}
     try:
@@ -324,7 +338,14 @@ def load_seen() -> Dict[str, Dict]:
 
 
 def save_seen(seen: Dict[str, Dict], max_age_days: int = 60) -> None:
-    """Prune entries older than max_age_days, then persist."""
+    """Prune entries older than max_age_days, then persist (DB or file)."""
+    if _use_db_seen():
+        try:
+            from db import save_seen_dict
+            save_seen_dict(seen, max_age_days=max_age_days)
+            return
+        except Exception as e:
+            print(f"[WARN] DB seen save failed, falling back to file: {e}")
     cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     pruned = {url: meta for url, meta in seen.items()
               if meta.get("first", "9999") >= cutoff}
@@ -508,6 +529,15 @@ class MarketplaceScraper:
 
             raw_text = clean_text(card.get_text(" "))[:1000]
 
+            # Image: OLX cards put the thumbnail in <img src="..."> or
+            # data-src for lazy-loaded ones.
+            image_url = ""
+            img_el = card.select_one("img[src]") or card.select_one("img[data-src]")
+            if img_el:
+                image_url = img_el.get("src") or img_el.get("data-src") or ""
+                if image_url and not image_url.startswith("http"):
+                    image_url = urljoin("https://www.olx.pt", image_url)
+
             listings.append(Listing(
                 title=title[:160],
                 price=price,
@@ -515,6 +545,7 @@ class MarketplaceScraper:
                 source="OLX",
                 location=location,
                 raw_text=raw_text,
+                image_url=image_url,
             ))
 
         return dedupe_listings(listings)
@@ -565,12 +596,15 @@ class MarketplaceScraper:
 
             body = clean_text(it.get("body", ""))
             raw_text = clean_text(f"{title} {body} {location}")[:1000]
+            image_url = it.get("imageFullURL") or ""
 
             listings.append(Listing(
                 title=title[:160],
                 price=price,
                 url=full_url.split("?")[0],
                 source="CustoJusto",
+                description=body[:2000],
+                image_url=image_url,
                 location=location,
                 raw_text=raw_text,
             ))
@@ -938,6 +972,7 @@ def process_watch(
     alerted_lock: Optional[threading.Lock] = None,
     market_cache: Optional[Dict] = None,
     market_cache_lock: Optional[threading.Lock] = None,
+    on_deal_callback=None,
 ) -> Tuple[Dict[str, Dict], WatchStats]:
     """
     Process one watchlist entry.
@@ -1084,18 +1119,62 @@ def process_watch(
 
             new_alerted_price = prev_alerted_price
             if should_alert:
+                # Save the deal first so the dashboard reflects it even if
+                # Telegram is down. The callback returns a dashboard URL that
+                # we append to the Telegram message.
+                deal_dashboard_url = None
+                if on_deal_callback is not None:
+                    try:
+                        risk_words = []
+                        bw = find_blacklist(text_for_filter, blacklist)
+                        if bw:
+                            risk_words.append(bw)
+                        deal_payload = {
+                            "url": listing.url,
+                            "title": listing.title,
+                            "price": listing.price,
+                            "estimated_value": score.get("market_value"),
+                            "estimated_low": (market_stats or {}).get("min"),
+                            "estimated_high": (market_stats or {}).get("max"),
+                            "profit": score.get("profit"),
+                            "profit_percent": score.get("margin_percent"),
+                            "location": listing.location or location_hit,
+                            "image_url": listing.image_url,
+                            "source": listing.source,
+                            "category": watch["name"],
+                            "search_term": ", ".join(watch.get("keywords", [])),
+                            "description": listing.description or listing.raw_text[:500],
+                            "reason": score.get("reason"),
+                            "risk_flags": risk_words,
+                            "telegram_sent": False,
+                        }
+                        deal_dashboard_url = on_deal_callback(deal_payload)
+                    except Exception as e:
+                        print(f"  [WARN] DB save failed: {e}")
+
                 try:
                     prev_price_for_alert = previous.get("price") if (previous and is_price_drop) else None
-                    send_telegram(token, chat_id, format_alert(
+                    msg = format_alert(
                         watch["name"], listing, score, location_hit or "",
                         previous_price=prev_price_for_alert,
-                    ))
+                    )
+                    if deal_dashboard_url:
+                        msg += f"\nDashboard: {deal_dashboard_url}"
+                    send_telegram(token, chat_id, msg)
                     new_alerted_price = listing.price
                     if is_price_drop:
                         stats.price_drops += 1
                     else:
                         stats.alerts += 1
                     print(f"  [ALERT] Telegram enviado!")
+
+                    # Mark the deal as telegram_sent now that it succeeded.
+                    if on_deal_callback is not None:
+                        try:
+                            from db import hash_url, mark_telegram_sent
+                            mark_telegram_sent(hash_url(listing.url))
+                        except Exception:
+                            pass
                 except Exception as e:
                     stats.errors += 1
                     # Roll back the cycle-dedup so a retry next cycle is allowed
@@ -1122,7 +1201,7 @@ def process_watch(
 # Main loop
 # ──────────────────────────────────────────────────────────────────────────────
 
-def run_once(config: Dict, token: str, chat_id: str) -> List[WatchStats]:
+def run_once(config: Dict, token: str, chat_id: str, on_deal_callback=None) -> List[WatchStats]:
     t0 = time.time()
     seen = load_seen()
     scraper = MarketplaceScraper(
@@ -1150,6 +1229,7 @@ def run_once(config: Dict, token: str, chat_id: str) -> List[WatchStats]:
                 allowed_locations, require_location,
                 alerted_this_cycle, alerted_lock,
                 market_cache, market_cache_lock,
+                on_deal_callback,
             ): watch["name"]
             for watch in config["watchlists"]
         }

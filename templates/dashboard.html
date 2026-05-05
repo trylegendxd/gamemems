@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · OLX Flip{% endblock %}
+{% block body %}
+<header class="topbar">
+  <div class="brand">🔥 <strong>OLX Flip</strong> <span class="muted">dashboard</span></div>
+  <div class="status" id="scraper-status" title="Scraper status">
+    <span class="dot dot-idle"></span>
+    <span class="status-text">a carregar…</span>
+  </div>
+  <nav>
+    <button class="btn" id="btn-run-now" title="Correr scan agora">▶ Run scan</button>
+    <a class="btn" href="/api/deals.csv" title="Exportar CSV">⬇ CSV</a>
+    <a class="btn ghost" href="{{ url_for('logout') }}">Sair</a>
+  </nav>
+</header>
+
+<section class="stats" id="stats">
+  <div class="stat"><div class="num" id="s-total">–</div><div class="lbl">Deals total</div></div>
+  <div class="stat"><div class="num" id="s-today">–</div><div class="lbl">Hoje</div></div>
+  <div class="stat"><div class="num" id="s-avgpct">–</div><div class="lbl">Margem média</div></div>
+  <div class="stat"><div class="num" id="s-active">–</div><div class="lbl">Lucro estimado activo</div></div>
+  <div class="stat"><div class="num" id="s-favs">–</div><div class="lbl">Favoritos</div></div>
+  <div class="stat"><div class="num" id="s-ignored">–</div><div class="lbl">Ignorados</div></div>
+  <div class="stat"><div class="num" id="s-archived">–</div><div class="lbl">Arquivados</div></div>
+  <div class="stat"><div class="num" id="s-lastscan">–</div><div class="lbl">Última scan</div></div>
+</section>
+
+<section class="filters" id="filters">
+  <input type="search" id="f-search" placeholder="Procurar título…">
+  <select id="f-category">
+    <option value="">Todas as categorias</option>
+    {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+  </select>
+  <input type="number" id="f-minpct" placeholder="Margem ≥ %">
+  <input type="number" id="f-minprofit" placeholder="Lucro ≥ €">
+  <input type="text" id="f-location" placeholder="Localização…">
+  <select id="f-sort">
+    <option value="newest">Mais recentes</option>
+    <option value="highest_profit">Maior lucro €</option>
+    <option value="highest_pct">Maior margem %</option>
+    <option value="lowest_price">Preço mais baixo</option>
+    <option value="highest_value">Maior mediana</option>
+  </select>
+  <label class="chip"><input type="checkbox" id="f-unseen"> Só não vistos</label>
+  <label class="chip"><input type="checkbox" id="f-favs"> Só favoritos</label>
+  <label class="chip"><input type="checkbox" id="f-norisk"> Esconder risco</label>
+  <label class="chip"><input type="checkbox" id="f-noignored" checked> Esconder ignorados</label>
+  <label class="chip"><input type="checkbox" id="f-noarchived" checked> Esconder arquivados</label>
+  <button class="btn" id="btn-clear">Limpar</button>
+</section>
+
+<main id="deals" class="deal-grid">
+  <div class="empty">A carregar deals…</div>
+</main>
+
+<footer class="footnote">
+  <span>Auto-refresh activo · <span id="last-refresh">—</span></span>
+</footer>
+
+{% raw %}
+<template id="card-tpl">
+  <article class="card" data-id="">
+    <div class="card-img">
+      <img loading="lazy" referrerpolicy="no-referrer" alt="">
+      <span class="badge badge-pct"></span>
+      <span class="badge badge-risk hidden">⚠</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title"></h3>
+      <div class="meta">
+        <span class="cat"></span>
+        <span class="loc"></span>
+      </div>
+      <div class="prices">
+        <span class="price"></span>
+        <span class="median"></span>
+      </div>
+      <div class="profit"></div>
+      <div class="actions">
+        <a class="btn small" target="_blank" rel="noopener" data-action="olx">OLX ↗</a>
+        <button class="btn small" data-action="detail">Detalhe</button>
+        <button class="btn small ghost" data-action="favorite">★</button>
+        <button class="btn small ghost" data-action="ignore">∅</button>
+        <button class="btn small ghost" data-action="archive">📦</button>
+      </div>
+    </div>
+  </article>
+</template>
+{% endraw %}
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <button class="modal-close" data-close>×</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

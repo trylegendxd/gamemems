@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ deal.title }} · OLX Flip{% endblock %}
+{% block body %}
+<header class="topbar">
+  <div class="brand"><a href="{{ url_for('dashboard') }}" class="brand-link">← Dashboard</a></div>
+  <nav><a class="btn ghost" href="{{ url_for('logout') }}">Sair</a></nav>
+</header>
+
+<main class="detail">
+  <div class="detail-grid">
+    <div class="detail-img">
+      {% if deal.image_url %}
+        <img referrerpolicy="no-referrer" src="{{ deal.image_url }}" alt="{{ deal.title }}">
+      {% else %}
+        <div class="img-placeholder">sem imagem</div>
+      {% endif %}
+    </div>
+    <div class="detail-body">
+      <h1>{{ deal.title }}</h1>
+      <div class="muted">{{ deal.category or '-' }} · {{ deal.source or '-' }} · {{ deal.location or 'localização desconhecida' }}</div>
+
+      <div class="price-block">
+        <div><span class="lbl">Preço pedido</span> <strong>{{ '%.0f'|format(deal.price) if deal.price is not none else '—' }}€</strong></div>
+        <div><span class="lbl">Mediana mercado</span> <strong>{{ '%.0f'|format(deal.estimated_value) if deal.estimated_value is not none else '—' }}€</strong></div>
+        <div><span class="lbl">Range</span>
+          <strong>{{ '%.0f'|format(deal.estimated_low) if deal.estimated_low is not none else '—' }}€
+                  – {{ '%.0f'|format(deal.estimated_high) if deal.estimated_high is not none else '—' }}€</strong>
+        </div>
+        <div><span class="lbl">Lucro</span> <strong class="profit-pos">{{ '%.0f'|format(deal.profit) if deal.profit is not none else '—' }}€</strong></div>
+        <div><span class="lbl">Margem</span> <strong class="profit-pos">{{ deal.profit_percent }}%</strong></div>
+      </div>
+
+      {% if deal.reason %}
+        <p class="reason"><strong>Razão:</strong> {{ deal.reason }}</p>
+      {% endif %}
+
+      {% if deal.risk_flags %}
+        <div class="risks">
+          {% for r in deal.risk_flags %}<span class="badge badge-risk">⚠ {{ r }}</span>{% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="actions">
+        <a class="btn primary" href="{{ deal.url }}" target="_blank" rel="noopener">Abrir no OLX ↗</a>
+        <button class="btn" data-toggle="favorite" data-value="{{ deal.favorite|tojson }}">★ Favorito</button>
+        <button class="btn" data-toggle="contacted" data-value="{{ deal.contacted|tojson }}">📞 Contactado</button>
+        <button class="btn" data-toggle="ignored" data-value="{{ deal.ignored|tojson }}">∅ Ignorar</button>
+        <button class="btn" data-toggle="archived" data-value="{{ deal.archived|tojson }}">📦 Arquivar</button>
+        <button class="btn" id="copy-url">Copiar URL</button>
+        <button class="btn" id="resend-tg">Re-enviar Telegram</button>
+      </div>
+
+      <div class="telegram-status muted">
+        Telegram: {% if deal.telegram_sent %}enviado em {{ deal.telegram_sent_at }}{% else %}não enviado{% endif %}
+      </div>
+
+      <h2>Notas privadas</h2>
+      <textarea id="notes" rows="6" placeholder="Anota aqui…">{{ deal.notes or '' }}</textarea>
+      <button class="btn primary" id="save-notes">Guardar notas</button>
+
+      {% if deal.description %}
+        <h2>Descrição</h2>
+        <pre class="desc">{{ deal.description }}</pre>
+      {% endif %}
+    </div>
+  </div>
+</main>
+
+<script>
+  const DEAL_ID = {{ deal.id }};
+  const DEAL_URL = {{ deal.url|tojson }};
+
+  async function patchDeal(fields) {
+    const r = await fetch(`/api/deals/${DEAL_ID}`, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(fields),
+    });
+    return r.json();
+  }
+
+  document.querySelectorAll("[data-toggle]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const k = btn.dataset.toggle;
+      const cur = JSON.parse(btn.dataset.value);
+      const next = !cur;
+      btn.dataset.value = JSON.stringify(next);
+      btn.classList.toggle("active", next);
+      await patchDeal({[k]: next});
+    });
+    if (JSON.parse(btn.dataset.value)) btn.classList.add("active");
+  });
+
+  document.getElementById("save-notes").addEventListener("click", async () => {
+    const notes = document.getElementById("notes").value;
+    await patchDeal({notes});
+    alert("Notas guardadas.");
+  });
+
+  document.getElementById("copy-url").addEventListener("click", async () => {
+    await navigator.clipboard.writeText(DEAL_URL);
+    alert("URL copiado.");
+  });
+
+  document.getElementById("resend-tg").addEventListener("click", async () => {
+    const r = await fetch(`/api/deals/${DEAL_ID}/send-telegram`, {method: "POST"});
+    const j = await r.json();
+    alert(j.sent ? "Enviado!" : ("Erro: " + (j.error || "desconhecido")));
+  });
+</script>
+{% endblock %}
