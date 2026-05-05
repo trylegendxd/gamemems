@@ -86,7 +86,9 @@ function renderDeals(deals) {
     const pctEl = node.querySelector(".badge-pct");
     if (pct != null) {
       pctEl.textContent = `${pct}%`;
-      if      (pct >= 30) pctEl.classList.add("");           // green default
+      // ≥30% keeps the default green styling (.badge-pct alone).
+      // 20-30% gets the yellow modifier; <20% gets the muted modifier.
+      if      (pct >= 30) { /* default green, no extra class */ }
       else if (pct >= 20) pctEl.classList.add("medium");
       else                pctEl.classList.add("low");
     } else {
