@@ -1,0 +1,2489 @@
+{
+  "075d65f048848970": {
+    "computed_at": "2026-05-05T02:22:09Z",
+    "market": {
+      "by_model": {
+        "ipad": {
+          "market_value": 25.0,
+          "max": 400.0,
+          "min": 4.0,
+          "sample_size": 9
+        },
+        "ipad air": {
+          "market_value": 497.5,
+          "max": 575.0,
+          "min": 420.0,
+          "sample_size": 2
+        },
+        "ipad air 13": {
+          "market_value": 750.0,
+          "max": 750.0,
+          "min": 750.0,
+          "sample_size": 1
+        },
+        "ipad air 2013": {
+          "market_value": 90.0,
+          "max": 90.0,
+          "min": 90.0,
+          "sample_size": 1
+        },
+        "ipad air 2025": {
+          "market_value": 700.0,
+          "max": 700.0,
+          "min": 700.0,
+          "sample_size": 1
+        },
+        "ipad air 4": {
+          "market_value": 300.0,
+          "max": 300.0,
+          "min": 300.0,
+          "sample_size": 1
+        },
+        "ipad air 5": {
+          "market_value": 360.0,
+          "max": 400.0,
+          "min": 320.0,
+          "sample_size": 2
+        },
+        "ipad air 5.": {
+          "market_value": 300.0,
+          "max": 300.0,
+          "min": 300.0,
+          "sample_size": 1
+        },
+        "ipad gen10": {
+          "market_value": 250.0,
+          "max": 300.0,
+          "min": 219.0,
+          "sample_size": 7
+        },
+        "ipad gen11": {
+          "market_value": 300.0,
+          "max": 300.0,
+          "min": 300.0,
+          "sample_size": 1
+        },
+        "ipad gen13": {
+          "market_value": 550.0,
+          "max": 550.0,
+          "min": 550.0,
+          "sample_size": 1
+        },
+        "ipad gen3": {
+          "market_value": 100.0,
+          "max": 100.0,
+          "min": 100.0,
+          "sample_size": 1
+        },
+        "ipad gen5": {
+          "market_value": 75.0,
+          "max": 75.0,
+          "min": 75.0,
+          "sample_size": 1
+        },
+        "ipad gen6": {
+          "market_value": 112.5,
+          "max": 150.0,
+          "min": 75.0,
+          "sample_size": 2
+        },
+        "ipad gen64": {
+          "market_value": 50.0,
+          "max": 50.0,
+          "min": 50.0,
+          "sample_size": 1
+        },
+        "ipad gen8": {
+          "market_value": 160.0,
+          "max": 160.0,
+          "min": 160.0,
+          "sample_size": 1
+        },
+        "ipad gen9": {
+          "market_value": 180.0,
+          "max": 260.0,
+          "min": 120.0,
+          "sample_size": 5
+        }
+      },
+      "global": {
+        "market_value": 200.0,
+        "max": 420.0,
+        "min": 4.0,
+        "sample_size": 35
+      }
+    },
+    "watch_name": "iPad"
+  },
+  "0780fc0121c5f59a": {
+    "computed_at": "2026-05-05T02:23:48Z",
+    "market": {
+      "by_model": {
+        "xbox series x": {
+          "market_value": 300.0,
+          "max": 480.0,
+          "min": 5.0,
+          "sample_size": 38
+        }
+      },
+      "global": {
+        "market_value": 300.0,
+        "max": 480.0,
+        "min": 5.0,
+        "sample_size": 38
+      }
+    },
+    "watch_name": "Xbox Series X"
+  },
+  "07f7776d1491b126": {
+    "computed_at": "2026-05-05T02:24:42Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 17.0,
+        "max": 17.0,
+        "min": 17.0,
+        "sample_size": 1
+      }
+    },
+    "watch_name": "Apple Watch SE"
+  },
+  "098808438dcc8ac6": {
+    "computed_at": "2026-05-05T02:21:27Z",
+    "market": {
+      "by_model": {
+        "samsung s22": {
+          "market_value": 180.0,
+          "max": 230.0,
+          "min": 5.0,
+          "sample_size": 18
+        },
+        "samsung s22 plus": {
+          "market_value": 135.0,
+          "max": 225.0,
+          "min": 7.0,
+          "sample_size": 4
+        }
+      },
+      "global": {
+        "market_value": 175.0,
+        "max": 230.0,
+        "min": 5.0,
+        "sample_size": 22
+      }
+    },
+    "watch_name": "Samsung Galaxy S22"
+  },
+  "0ee40e57a04c48dc": {
+    "computed_at": "2026-05-05T02:20:56Z",
+    "market": {
+      "by_model": {
+        "samsung s6": {
+          "market_value": 250.0,
+          "max": 250.0,
+          "min": 250.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 170.0,
+        "max": 290.0,
+        "min": 1.0,
+        "sample_size": 28
+      }
+    },
+    "watch_name": "Monitor Ultrawide"
+  },
+  "18ad3b677484764a": {
+    "computed_at": "2026-05-05T02:20:48Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 150.0,
+        "max": 650.0,
+        "min": 70.0,
+        "sample_size": 26
+      }
+    },
+    "watch_name": "Monitor 240Hz"
+  },
+  "1a6d7c490109d1fd": {
+    "computed_at": "2026-05-05T02:19:49Z",
+    "market": {
+      "by_model": {
+        "rtx 4060 ti": {
+          "market_value": 368.0,
+          "max": 530.0,
+          "min": 299.0,
+          "sample_size": 9
+        }
+      },
+      "global": {
+        "market_value": 368.0,
+        "max": 530.0,
+        "min": 299.0,
+        "sample_size": 9
+      }
+    },
+    "watch_name": "RTX 4060 Ti"
+  },
+  "1c4a06d37954c889": {
+    "computed_at": "2026-05-05T02:22:46Z",
+    "market": {
+      "by_model": {
+        "macbook pro": {
+          "market_value": 540.0,
+          "max": 1325.0,
+          "min": 420.0,
+          "sample_size": 3
+        },
+        "macbook pro 13": {
+          "market_value": 500.0,
+          "max": 550.0,
+          "min": 225.0,
+          "sample_size": 3
+        },
+        "macbook pro 14": {
+          "market_value": 1600.0,
+          "max": 1600.0,
+          "min": 1600.0,
+          "sample_size": 1
+        },
+        "macbook pro 16": {
+          "market_value": 850.0,
+          "max": 899.0,
+          "min": 850.0,
+          "sample_size": 3
+        },
+        "macbook pro 20": {
+          "market_value": 420.0,
+          "max": 420.0,
+          "min": 420.0,
+          "sample_size": 1
+        },
+        "macbook pro m1": {
+          "market_value": 540.0,
+          "max": 1000.0,
+          "min": 299.0,
+          "sample_size": 13
+        },
+        "macbook pro m1 13": {
+          "market_value": 167.5,
+          "max": 300.0,
+          "min": 35.0,
+          "sample_size": 2
+        },
+        "macbook pro m1 16": {
+          "market_value": 910.0,
+          "max": 970.0,
+          "min": 850.0,
+          "sample_size": 2
+        }
+      },
+      "global": {
+        "market_value": 540.0,
+        "max": 1000.0,
+        "min": 15.0,
+        "sample_size": 27
+      }
+    },
+    "watch_name": "MacBook Pro M1"
+  },
+  "219ae70bd318fc75": {
+    "computed_at": "2026-05-05T02:23:14Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "PC i7 SSD"
+  },
+  "2af1ad13982a3889": {
+    "computed_at": "2026-05-05T02:21:01Z",
+    "market": {
+      "by_model": {
+        "iphone 11": {
+          "market_value": 90.0,
+          "max": 160.0,
+          "min": 3.0,
+          "sample_size": 46
+        }
+      },
+      "global": {
+        "market_value": 90.0,
+        "max": 160.0,
+        "min": 3.0,
+        "sample_size": 46
+      }
+    },
+    "watch_name": "iPhone 11"
+  },
+  "2c2ad1435912ff5a": {
+    "computed_at": "2026-05-05T02:20:38Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 92.0,
+        "max": 145.0,
+        "min": 1.0,
+        "sample_size": 8
+      }
+    },
+    "watch_name": "Monitor 144Hz"
+  },
+  "2cb7dcff1ada52c0": {
+    "computed_at": "2026-05-05T02:25:09Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 159.5,
+        "max": 275.0,
+        "min": 63.0,
+        "sample_size": 18
+      }
+    },
+    "watch_name": "RAM DDR4 32GB"
+  },
+  "2ef0509d9e684bac": {
+    "computed_at": "2026-05-05T02:21:22Z",
+    "market": {
+      "by_model": {
+        "samsung s21": {
+          "market_value": 170.0,
+          "max": 280.0,
+          "min": 3.0,
+          "sample_size": 21
+        },
+        "samsung s21 plus": {
+          "market_value": 130.0,
+          "max": 200.0,
+          "min": 4.0,
+          "sample_size": 5
+        }
+      },
+      "global": {
+        "market_value": 170.0,
+        "max": 280.0,
+        "min": 3.0,
+        "sample_size": 26
+      }
+    },
+    "watch_name": "Samsung Galaxy S21"
+  },
+  "337a0049d47cacf8": {
+    "computed_at": "2026-05-05T02:23:10Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "PC i5 SSD"
+  },
+  "366d6f3f89d30eb4": {
+    "computed_at": "2026-05-05T02:25:27Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 587.5,
+        "max": 670.0,
+        "min": 12.0,
+        "sample_size": 4
+      }
+    },
+    "watch_name": "Steam Deck OLED"
+  },
+  "3690fc7f59137277": {
+    "computed_at": "2026-05-05T02:21:35Z",
+    "market": {
+      "by_model": {
+        "samsung a54": {
+          "market_value": 200.0,
+          "max": 350.0,
+          "min": 100.0,
+          "sample_size": 24
+        }
+      },
+      "global": {
+        "market_value": 200.0,
+        "max": 350.0,
+        "min": 100.0,
+        "sample_size": 24
+      }
+    },
+    "watch_name": "Samsung Galaxy A54"
+  },
+  "3909e8675f2e2ec0": {
+    "computed_at": "2026-05-05T02:26:14Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 449.5,
+        "max": 620.0,
+        "min": 350.0,
+        "sample_size": 14
+      }
+    },
+    "watch_name": "Mac Mini M2"
+  },
+  "39c9bef0f67801d5": {
+    "computed_at": "2026-05-05T02:26:22Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 550.0,
+        "max": 750.0,
+        "min": 350.0,
+        "sample_size": 13
+      }
+    },
+    "watch_name": "DJI Mini 3 Pro"
+  },
+  "3a8370c957638a79": {
+    "computed_at": "2026-05-05T02:24:51Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 100.0,
+        "max": 350.0,
+        "min": 3.0,
+        "sample_size": 51
+      }
+    },
+    "watch_name": "GoPro Hero"
+  },
+  "3bd6977a620628c2": {
+    "computed_at": "2026-05-05T02:22:12Z",
+    "market": {
+      "by_model": {
+        "ipad pro": {
+          "market_value": 750.0,
+          "max": 990.0,
+          "min": 40.0,
+          "sample_size": 10
+        },
+        "ipad pro 11": {
+          "market_value": 322.5,
+          "max": 1190.0,
+          "min": 15.0,
+          "sample_size": 14
+        },
+        "ipad pro 11 m1": {
+          "market_value": 550.0,
+          "max": 550.0,
+          "min": 550.0,
+          "sample_size": 1
+        },
+        "ipad pro 11 m2": {
+          "market_value": 550.0,
+          "max": 550.0,
+          "min": 550.0,
+          "sample_size": 1
+        },
+        "ipad pro 11 m4": {
+          "market_value": 700.0,
+          "max": 700.0,
+          "min": 700.0,
+          "sample_size": 1
+        },
+        "ipad pro 11 m5": {
+          "market_value": 1050.0,
+          "max": 1050.0,
+          "min": 1050.0,
+          "sample_size": 1
+        },
+        "ipad pro 12.9": {
+          "market_value": 382.5,
+          "max": 600.0,
+          "min": 20.0,
+          "sample_size": 12
+        },
+        "ipad pro 13": {
+          "market_value": 722.5,
+          "max": 950.0,
+          "min": 495.0,
+          "sample_size": 2
+        },
+        "ipad pro 13 m4": {
+          "market_value": 999.0,
+          "max": 999.0,
+          "min": 999.0,
+          "sample_size": 1
+        },
+        "ipad pro 2017": {
+          "market_value": 100.0,
+          "max": 100.0,
+          "min": 100.0,
+          "sample_size": 1
+        },
+        "ipad pro 3": {
+          "market_value": 400.0,
+          "max": 400.0,
+          "min": 400.0,
+          "sample_size": 1
+        },
+        "ipad pro 5": {
+          "market_value": 600.0,
+          "max": 600.0,
+          "min": 600.0,
+          "sample_size": 1
+        },
+        "ipad pro 9.7": {
+          "market_value": 87.5,
+          "max": 100.0,
+          "min": 75.0,
+          "sample_size": 2
+        }
+      },
+      "global": {
+        "market_value": 497.5,
+        "max": 1190.0,
+        "min": 15.0,
+        "sample_size": 48
+      }
+    },
+    "watch_name": "iPad Pro"
+  },
+  "3ccef6e98111d14b": {
+    "computed_at": "2026-05-05T02:22:57Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "Gaming Laptop i7 RTX"
+  },
+  "3e01ce738fd3611f": {
+    "computed_at": "2026-05-05T02:26:44Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 1200.0,
+        "max": 2400.0,
+        "min": 60.0,
+        "sample_size": 6
+      }
+    },
+    "watch_name": "Canon R6"
+  },
+  "3fe7bedf79e158ea": {
+    "computed_at": "2026-05-05T02:26:31Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 1125.0,
+        "max": 2750.0,
+        "min": 20.0,
+        "sample_size": 18
+      }
+    },
+    "watch_name": "DJI Mavic 3"
+  },
+  "40177aa4cfb9164f": {
+    "computed_at": "2026-05-05T02:23:54Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 50.0,
+        "max": 160.0,
+        "min": 6.0,
+        "sample_size": 18
+      }
+    },
+    "watch_name": "AirPods Pro"
+  },
+  "40c256430ccd5cc3": {
+    "computed_at": "2026-05-05T02:21:04Z",
+    "market": {
+      "by_model": {
+        "iphone 12": {
+          "market_value": 137.5,
+          "max": 275.0,
+          "min": 10.0,
+          "sample_size": 22
+        }
+      },
+      "global": {
+        "market_value": 137.5,
+        "max": 275.0,
+        "min": 10.0,
+        "sample_size": 22
+      }
+    },
+    "watch_name": "iPhone 12"
+  },
+  "41e9a6d982ca99e9": {
+    "computed_at": "2026-05-05T02:25:31Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 400.0,
+        "max": 600.0,
+        "min": 270.0,
+        "sample_size": 20
+      }
+    },
+    "watch_name": "ROG Ally"
+  },
+  "42686d3ed1313ff9": {
+    "computed_at": "2026-05-05T02:27:15Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 70.0,
+        "max": 70.0,
+        "min": 70.0,
+        "sample_size": 1
+      }
+    },
+    "watch_name": "Keychron K8"
+  },
+  "433a2f794fbdad49": {
+    "computed_at": "2026-05-05T02:20:29Z",
+    "market": {
+      "by_model": {
+        "rx 6800 xt": {
+          "market_value": 435.0,
+          "max": 450.0,
+          "min": 420.0,
+          "sample_size": 2
+        }
+      },
+      "global": {
+        "market_value": 435.0,
+        "max": 450.0,
+        "min": 420.0,
+        "sample_size": 2
+      }
+    },
+    "watch_name": "RX 6800 XT"
+  },
+  "452c261b62467322": {
+    "computed_at": "2026-05-05T02:26:39Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 950.0,
+        "max": 1350.0,
+        "min": 600.0,
+        "sample_size": 11
+      }
+    },
+    "watch_name": "Sony A7 III"
+  },
+  "4916ec6473fca8a2": {
+    "computed_at": "2026-05-05T02:22:17Z",
+    "market": {
+      "by_model": {
+        "ipad air": {
+          "market_value": 490.0,
+          "max": 670.0,
+          "min": 350.0,
+          "sample_size": 10
+        },
+        "ipad air 1": {
+          "market_value": 78.0,
+          "max": 78.0,
+          "min": 78.0,
+          "sample_size": 1
+        },
+        "ipad air 11": {
+          "market_value": 525.0,
+          "max": 600.0,
+          "min": 450.0,
+          "sample_size": 2
+        },
+        "ipad air 13": {
+          "market_value": 750.0,
+          "max": 750.0,
+          "min": 750.0,
+          "sample_size": 1
+        },
+        "ipad air 2": {
+          "market_value": 55.0,
+          "max": 100.0,
+          "min": 35.0,
+          "sample_size": 5
+        },
+        "ipad air 2.": {
+          "market_value": 90.0,
+          "max": 90.0,
+          "min": 90.0,
+          "sample_size": 1
+        },
+        "ipad air 2013": {
+          "market_value": 90.0,
+          "max": 90.0,
+          "min": 90.0,
+          "sample_size": 1
+        },
+        "ipad air 2023": {
+          "market_value": 500.0,
+          "max": 500.0,
+          "min": 500.0,
+          "sample_size": 1
+        },
+        "ipad air 2025": {
+          "market_value": 700.0,
+          "max": 700.0,
+          "min": 700.0,
+          "sample_size": 1
+        },
+        "ipad air 3": {
+          "market_value": 135.0,
+          "max": 180.0,
+          "min": 90.0,
+          "sample_size": 2
+        },
+        "ipad air 4": {
+          "market_value": 249.0,
+          "max": 300.0,
+          "min": 20.0,
+          "sample_size": 7
+        },
+        "ipad air 5": {
+          "market_value": 365.0,
+          "max": 500.0,
+          "min": 300.0,
+          "sample_size": 6
+        },
+        "ipad air 5.": {
+          "market_value": 300.0,
+          "max": 300.0,
+          "min": 300.0,
+          "sample_size": 1
+        },
+        "ipad pro": {
+          "market_value": 40.0,
+          "max": 40.0,
+          "min": 40.0,
+          "sample_size": 1
+        },
+        "ipad pro 10.5": {
+          "market_value": 20.0,
+          "max": 20.0,
+          "min": 20.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 300.0,
+        "max": 750.0,
+        "min": 20.0,
+        "sample_size": 43
+      }
+    },
+    "watch_name": "iPad Air"
+  },
+  "4a206652fe457e48": {
+    "computed_at": "2026-05-05T02:19:23Z",
+    "market": {
+      "by_model": {
+        "rtx 3070": {
+          "market_value": 250.0,
+          "max": 310.0,
+          "min": 220.0,
+          "sample_size": 25
+        }
+      },
+      "global": {
+        "market_value": 250.0,
+        "max": 310.0,
+        "min": 220.0,
+        "sample_size": 25
+      }
+    },
+    "watch_name": "RTX 3070"
+  },
+  "4ab85f2e7d7b9efd": {
+    "computed_at": "2026-05-05T02:24:55Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 442.5,
+        "max": 1100.0,
+        "min": 2.99,
+        "sample_size": 24
+      }
+    },
+    "watch_name": "Sony Alpha A6000"
+  },
+  "4b808406159ea341": {
+    "computed_at": "2026-05-05T02:25:13Z",
+    "market": {
+      "by_model": {
+        "ps5": {
+          "market_value": 110.0,
+          "max": 110.0,
+          "min": 110.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 127.5,
+        "max": 180.0,
+        "min": 100.0,
+        "sample_size": 18
+      }
+    },
+    "watch_name": "SSD NVMe 1TB"
+  },
+  "4c0864032d82b318": {
+    "computed_at": "2026-05-05T02:19:57Z",
+    "market": {
+      "by_model": {
+        "rtx 4070 super": {
+          "market_value": 500.0,
+          "max": 560.0,
+          "min": 450.0,
+          "sample_size": 3
+        },
+        "rx 7900 gre": {
+          "market_value": 550.0,
+          "max": 550.0,
+          "min": 550.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 525.0,
+        "max": 560.0,
+        "min": 450.0,
+        "sample_size": 4
+      }
+    },
+    "watch_name": "RTX 4070 Super"
+  },
+  "513361164d4315b1": {
+    "computed_at": "2026-05-05T02:25:57Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 480.0,
+        "max": 840.0,
+        "min": 300.0,
+        "sample_size": 37
+      }
+    },
+    "watch_name": "Apple Watch Ultra"
+  },
+  "53431f90ea27f8b8": {
+    "computed_at": "2026-05-05T02:24:32Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "Apple Watch Series 7"
+  },
+  "55a5620296327897": {
+    "computed_at": "2026-05-05T02:25:00Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 180.0,
+        "max": 390.0,
+        "min": 20.0,
+        "sample_size": 21
+      }
+    },
+    "watch_name": "DJI Mini"
+  },
+  "55ea4d6053266301": {
+    "computed_at": "2026-05-05T02:25:18Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 85.0,
+        "max": 100.0,
+        "min": 50.0,
+        "sample_size": 8
+      }
+    },
+    "watch_name": "Fonte 80+ Gold"
+  },
+  "571cde3bcde62e6b": {
+    "computed_at": "2026-05-05T02:21:30Z",
+    "market": {
+      "by_model": {
+        "samsung a50": {
+          "market_value": 3.0,
+          "max": 3.0,
+          "min": 3.0,
+          "sample_size": 1
+        },
+        "samsung s23": {
+          "market_value": 240.0,
+          "max": 400.0,
+          "min": 3.0,
+          "sample_size": 21
+        },
+        "samsung s23 fe": {
+          "market_value": 146.5,
+          "max": 290.0,
+          "min": 3.0,
+          "sample_size": 2
+        },
+        "samsung s23 plus": {
+          "market_value": 274.5,
+          "max": 300.0,
+          "min": 249.0,
+          "sample_size": 2
+        }
+      },
+      "global": {
+        "market_value": 244.5,
+        "max": 400.0,
+        "min": 3.0,
+        "sample_size": 26
+      }
+    },
+    "watch_name": "Samsung Galaxy S23"
+  },
+  "5877a27871130fd3": {
+    "computed_at": "2026-05-05T02:26:01Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 202.5,
+        "max": 300.0,
+        "min": 125.0,
+        "sample_size": 24
+      }
+    },
+    "watch_name": "Apple Watch Series 9"
+  },
+  "5b4256fadb188d69": {
+    "computed_at": "2026-05-05T02:23:58Z",
+    "market": {
+      "by_model": {
+        "ipad": {
+          "market_value": 5.0,
+          "max": 5.0,
+          "min": 5.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 30.0,
+        "max": 350.0,
+        "min": 5.0,
+        "sample_size": 31
+      }
+    },
+    "watch_name": "AirPods 3"
+  },
+  "5d85d9778ba3ae52": {
+    "computed_at": "2026-05-05T02:26:09Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 250.0,
+        "max": 450.0,
+        "min": 15.0,
+        "sample_size": 12
+      }
+    },
+    "watch_name": "AirPods Max"
+  },
+  "61bab94fa974dfbc": {
+    "computed_at": "2026-05-05T02:24:28Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 280.0,
+        "max": 320.0,
+        "min": 250.0,
+        "sample_size": 7
+      }
+    },
+    "watch_name": "Marshall Stanmore"
+  },
+  "62e51c13c9e05255": {
+    "computed_at": "2026-05-05T02:19:31Z",
+    "market": {
+      "by_model": {
+        "rtx 3080": {
+          "market_value": 350.0,
+          "max": 440.0,
+          "min": 275.0,
+          "sample_size": 28
+        }
+      },
+      "global": {
+        "market_value": 350.0,
+        "max": 440.0,
+        "min": 275.0,
+        "sample_size": 28
+      }
+    },
+    "watch_name": "RTX 3080"
+  },
+  "637cd3103f8e54d0": {
+    "computed_at": "2026-05-05T02:25:53Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 412.5,
+        "max": 580.0,
+        "min": 300.0,
+        "sample_size": 14
+      }
+    },
+    "watch_name": "Google Pixel 8 Pro"
+  },
+  "69137d0c41c34e2f": {
+    "computed_at": "2026-05-05T02:19:19Z",
+    "market": {
+      "by_model": {
+        "rtx 3060 ti": {
+          "market_value": 245.0,
+          "max": 350.0,
+          "min": 190.0,
+          "sample_size": 19
+        }
+      },
+      "global": {
+        "market_value": 245.0,
+        "max": 350.0,
+        "min": 190.0,
+        "sample_size": 19
+      }
+    },
+    "watch_name": "RTX 3060 Ti"
+  },
+  "6b291ee23697e5d1": {
+    "computed_at": "2026-05-05T02:19:45Z",
+    "market": {
+      "by_model": {
+        "rtx 4060": {
+          "market_value": 295.0,
+          "max": 305.0,
+          "min": 200.0,
+          "sample_size": 12
+        }
+      },
+      "global": {
+        "market_value": 295.0,
+        "max": 305.0,
+        "min": 200.0,
+        "sample_size": 12
+      }
+    },
+    "watch_name": "RTX 4060"
+  },
+  "6c6d0fef24156cef": {
+    "computed_at": "2026-05-05T02:26:49Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 325.0,
+        "max": 350.0,
+        "min": 270.0,
+        "sample_size": 5
+      }
+    },
+    "watch_name": "GoPro Hero 12"
+  },
+  "704fc3839cb3cfac": {
+    "computed_at": "2026-05-05T02:21:09Z",
+    "market": {
+      "by_model": {
+        "iphone 13": {
+          "market_value": 185.0,
+          "max": 330.0,
+          "min": 3.0,
+          "sample_size": 30
+        }
+      },
+      "global": {
+        "market_value": 185.0,
+        "max": 330.0,
+        "min": 3.0,
+        "sample_size": 30
+      }
+    },
+    "watch_name": "iPhone 13"
+  },
+  "70f8ad4af246d702": {
+    "computed_at": "2026-05-05T02:22:51Z",
+    "market": {
+      "by_model": {
+        "macbook pro": {
+          "market_value": 1500.0,
+          "max": 1600.0,
+          "min": 1400.0,
+          "sample_size": 2
+        },
+        "macbook pro 13": {
+          "market_value": 700.0,
+          "max": 800.0,
+          "min": 650.0,
+          "sample_size": 3
+        },
+        "macbook pro 14": {
+          "market_value": 1570.0,
+          "max": 1750.0,
+          "min": 1390.0,
+          "sample_size": 2
+        },
+        "macbook pro 20": {
+          "market_value": 1075.0,
+          "max": 1500.0,
+          "min": 650.0,
+          "sample_size": 2
+        },
+        "macbook pro m2": {
+          "market_value": 1200.0,
+          "max": 1900.0,
+          "min": 800.0,
+          "sample_size": 9
+        }
+      },
+      "global": {
+        "market_value": 1250.0,
+        "max": 1900.0,
+        "min": 650.0,
+        "sample_size": 18
+      }
+    },
+    "watch_name": "MacBook Pro M2"
+  },
+  "74bd108860df3275": {
+    "computed_at": "2026-05-05T02:22:22Z",
+    "market": {
+      "by_model": {
+        "ipad mini": {
+          "market_value": 50.0,
+          "max": 450.0,
+          "min": 5.0,
+          "sample_size": 13
+        },
+        "ipad mini 1": {
+          "market_value": 40.0,
+          "max": 60.0,
+          "min": 20.0,
+          "sample_size": 2
+        },
+        "ipad mini 2": {
+          "market_value": 55.0,
+          "max": 80.0,
+          "min": 39.99,
+          "sample_size": 4
+        },
+        "ipad mini 2024": {
+          "market_value": 380.0,
+          "max": 380.0,
+          "min": 380.0,
+          "sample_size": 1
+        },
+        "ipad mini 2024 a17": {
+          "market_value": 449.9,
+          "max": 449.9,
+          "min": 449.9,
+          "sample_size": 1
+        },
+        "ipad mini 3": {
+          "market_value": 80.0,
+          "max": 100.0,
+          "min": 60.0,
+          "sample_size": 2
+        },
+        "ipad mini 3.": {
+          "market_value": 15.0,
+          "max": 15.0,
+          "min": 15.0,
+          "sample_size": 1
+        },
+        "ipad mini 4": {
+          "market_value": 80.0,
+          "max": 100.0,
+          "min": 50.0,
+          "sample_size": 8
+        },
+        "ipad mini 5": {
+          "market_value": 140.0,
+          "max": 195.0,
+          "min": 125.0,
+          "sample_size": 3
+        },
+        "ipad mini 6": {
+          "market_value": 392.5,
+          "max": 425.0,
+          "min": 360.0,
+          "sample_size": 2
+        },
+        "ipad mini 7": {
+          "market_value": 365.0,
+          "max": 380.0,
+          "min": 350.0,
+          "sample_size": 2
+        },
+        "ipad mini 8.3": {
+          "market_value": 547.0,
+          "max": 745.0,
+          "min": 349.0,
+          "sample_size": 2
+        },
+        "ipad pro": {
+          "market_value": 40.0,
+          "max": 40.0,
+          "min": 40.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 80.0,
+        "max": 450.0,
+        "min": 5.0,
+        "sample_size": 43
+      }
+    },
+    "watch_name": "iPad Mini"
+  },
+  "7c10b7f0e8f58f9a": {
+    "computed_at": "2026-05-05T02:20:02Z",
+    "market": {
+      "by_model": {
+        "rtx 4070 ti": {
+          "market_value": 600.0,
+          "max": 750.0,
+          "min": 550.0,
+          "sample_size": 7
+        }
+      },
+      "global": {
+        "market_value": 600.0,
+        "max": 750.0,
+        "min": 550.0,
+        "sample_size": 7
+      }
+    },
+    "watch_name": "RTX 4070 Ti"
+  },
+  "7e0ed890bf8df347": {
+    "computed_at": "2026-05-05T02:19:53Z",
+    "market": {
+      "by_model": {
+        "rtx 4070": {
+          "market_value": 450.0,
+          "max": 600.0,
+          "min": 425.0,
+          "sample_size": 7
+        }
+      },
+      "global": {
+        "market_value": 450.0,
+        "max": 600.0,
+        "min": 425.0,
+        "sample_size": 7
+      }
+    },
+    "watch_name": "RTX 4070"
+  },
+  "7ed9bc63930ccf64": {
+    "computed_at": "2026-05-05T02:20:52Z",
+    "market": {
+      "by_model": {
+        "switch v1": {
+          "market_value": 90.0,
+          "max": 90.0,
+          "min": 90.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 189.5,
+        "max": 350.0,
+        "min": 35.0,
+        "sample_size": 34
+      }
+    },
+    "watch_name": "Monitor 4K"
+  },
+  "7f79df373852f687": {
+    "computed_at": "2026-05-05T02:20:11Z",
+    "market": {
+      "by_model": {
+        "gtx 1080 ti": {
+          "market_value": 210.0,
+          "max": 299.0,
+          "min": 160.0,
+          "sample_size": 9
+        }
+      },
+      "global": {
+        "market_value": 210.0,
+        "max": 299.0,
+        "min": 160.0,
+        "sample_size": 9
+      }
+    },
+    "watch_name": "GTX 1080 Ti"
+  },
+  "8017ae090e010c00": {
+    "computed_at": "2026-05-05T02:26:05Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 90.0,
+        "max": 100.0,
+        "min": 60.0,
+        "sample_size": 5
+      }
+    },
+    "watch_name": "AirPods Pro 2"
+  },
+  "802c76ebbabcffcd": {
+    "computed_at": "2026-05-05T02:24:19Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 122.5,
+        "max": 125.0,
+        "min": 120.0,
+        "sample_size": 2
+      }
+    },
+    "watch_name": "Sony WF-1000XM5"
+  },
+  "80c0355a86418a56": {
+    "computed_at": "2026-05-05T02:23:01Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "Gaming Laptop Ryzen RTX"
+  },
+  "81f44f6bf4c7b60e": {
+    "computed_at": "2026-05-05T02:22:39Z",
+    "market": {
+      "by_model": {
+        "macbook air 13": {
+          "market_value": 629.0,
+          "max": 750.0,
+          "min": 600.0,
+          "sample_size": 3
+        },
+        "macbook air m2": {
+          "market_value": 650.0,
+          "max": 850.0,
+          "min": 599.0,
+          "sample_size": 17
+        },
+        "macbook air m2 13": {
+          "market_value": 625.0,
+          "max": 625.0,
+          "min": 625.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 650.0,
+        "max": 850.0,
+        "min": 599.0,
+        "sample_size": 21
+      }
+    },
+    "watch_name": "MacBook Air M2"
+  },
+  "84bc5b13abc091ac": {
+    "computed_at": "2026-05-05T02:22:04Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 400.0,
+        "max": 600.0,
+        "min": 300.0,
+        "sample_size": 8
+      }
+    },
+    "watch_name": "OnePlus 12"
+  },
+  "852d3391d72f5480": {
+    "computed_at": "2026-05-05T02:25:48Z",
+    "market": {
+      "by_model": {
+        "samsung s24 ultra": {
+          "market_value": 550.0,
+          "max": 710.0,
+          "min": 435.0,
+          "sample_size": 26
+        },
+        "samsung s25 ultra": {
+          "market_value": 2.0,
+          "max": 2.0,
+          "min": 2.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 550.0,
+        "max": 750.0,
+        "min": 333.0,
+        "sample_size": 30
+      }
+    },
+    "watch_name": "Samsung Galaxy S24 Ultra"
+  },
+  "87f83dfdce0b8653": {
+    "computed_at": "2026-05-05T02:20:16Z",
+    "market": {
+      "by_model": {
+        "gtx 1070 ti": {
+          "market_value": 105.0,
+          "max": 135.0,
+          "min": 80.0,
+          "sample_size": 6
+        }
+      },
+      "global": {
+        "market_value": 105.0,
+        "max": 135.0,
+        "min": 80.0,
+        "sample_size": 6
+      }
+    },
+    "watch_name": "GTX 1070 Ti"
+  },
+  "89072e9de93f4b16": {
+    "computed_at": "2026-05-05T02:27:23Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "Synology DS920"
+  },
+  "8a84c29107323d77": {
+    "computed_at": "2026-05-05T02:27:06Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 150.0,
+        "max": 299.0,
+        "min": 50.0,
+        "sample_size": 20
+      }
+    },
+    "watch_name": "Roomba i7"
+  },
+  "8a9d5b77ef11ebf9": {
+    "computed_at": "2026-05-05T02:26:35Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 1125.0,
+        "max": 1600.0,
+        "min": 790.0,
+        "sample_size": 10
+      }
+    },
+    "watch_name": "DJI Air 3"
+  },
+  "8b57886bd21f2554": {
+    "computed_at": "2026-05-05T02:21:18Z",
+    "market": {
+      "by_model": {
+        "iphone 15": {
+          "market_value": 350.0,
+          "max": 500.0,
+          "min": 5.0,
+          "sample_size": 18
+        },
+        "iphone 15 plus": {
+          "market_value": 350.0,
+          "max": 495.0,
+          "min": 5.0,
+          "sample_size": 11
+        },
+        "iphone 15 promax": {
+          "market_value": 675.0,
+          "max": 675.0,
+          "min": 675.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 350.0,
+        "max": 675.0,
+        "min": 5.0,
+        "sample_size": 30
+      }
+    },
+    "watch_name": "iPhone 15"
+  },
+  "91150b15070e561a": {
+    "computed_at": "2026-05-05T02:21:52Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 215.0,
+        "max": 1000.0,
+        "min": 170.0,
+        "sample_size": 4
+      }
+    },
+    "watch_name": "Google Pixel 7"
+  },
+  "93f1337017b5f31f": {
+    "computed_at": "2026-05-05T02:23:19Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "PC Ryzen 5 SSD"
+  },
+  "93f153c5e680e825": {
+    "computed_at": "2026-05-05T02:21:13Z",
+    "market": {
+      "by_model": {
+        "iphone 13": {
+          "market_value": 10.0,
+          "max": 10.0,
+          "min": 10.0,
+          "sample_size": 1
+        },
+        "iphone 14": {
+          "market_value": 185.0,
+          "max": 400.0,
+          "min": 3.0,
+          "sample_size": 26
+        },
+        "iphone 14 plus": {
+          "market_value": 200.0,
+          "max": 280.0,
+          "min": 3.0,
+          "sample_size": 8
+        }
+      },
+      "global": {
+        "market_value": 200.0,
+        "max": 400.0,
+        "min": 3.0,
+        "sample_size": 35
+      }
+    },
+    "watch_name": "iPhone 14"
+  },
+  "9549ec38cba52401": {
+    "computed_at": "2026-05-05T02:24:01Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "Sony WH-1000XM4"
+  },
+  "9734b87fe2dc4bfd": {
+    "computed_at": "2026-05-05T02:23:27Z",
+    "market": {
+      "by_model": {
+        "ps5": {
+          "market_value": 120.0,
+          "max": 650.0,
+          "min": 1.0,
+          "sample_size": 55
+        }
+      },
+      "global": {
+        "market_value": 120.0,
+        "max": 650.0,
+        "min": 1.0,
+        "sample_size": 55
+      }
+    },
+    "watch_name": "PS5"
+  },
+  "991dda4bd266a3a3": {
+    "computed_at": "2026-05-05T02:19:27Z",
+    "market": {
+      "by_model": {
+        "rtx 3070 ti": {
+          "market_value": 300.0,
+          "max": 400.0,
+          "min": 250.0,
+          "sample_size": 13
+        }
+      },
+      "global": {
+        "market_value": 300.0,
+        "max": 400.0,
+        "min": 250.0,
+        "sample_size": 13
+      }
+    },
+    "watch_name": "RTX 3070 Ti"
+  },
+  "9a032fe130af5453": {
+    "computed_at": "2026-05-05T02:26:52Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 260.0,
+        "max": 450.0,
+        "min": 30.0,
+        "sample_size": 16
+      }
+    },
+    "watch_name": "GoPro Hero 11"
+  },
+  "9cd1d2251dddbb2d": {
+    "computed_at": "2026-05-05T02:25:23Z",
+    "market": {
+      "by_model": {
+        "switch v1": {
+          "market_value": 25.0,
+          "max": 25.0,
+          "min": 25.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 55.0,
+        "max": 600.0,
+        "min": 3.0,
+        "sample_size": 35
+      }
+    },
+    "watch_name": "Steam Deck"
+  },
+  "9ea338e4fd5a5f12": {
+    "computed_at": "2026-05-05T02:27:19Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 330.0,
+        "max": 330.0,
+        "min": 330.0,
+        "sample_size": 1
+      }
+    },
+    "watch_name": "Synology DS220"
+  },
+  "9ed594784a48e153": {
+    "computed_at": "2026-05-05T02:23:31Z",
+    "market": {
+      "by_model": {
+        "ps4 pro": {
+          "market_value": 165.0,
+          "max": 250.0,
+          "min": 75.0,
+          "sample_size": 26
+        }
+      },
+      "global": {
+        "market_value": 165.0,
+        "max": 250.0,
+        "min": 75.0,
+        "sample_size": 26
+      }
+    },
+    "watch_name": "PS4 Pro"
+  },
+  "9f13ee78863daff1": {
+    "computed_at": "2026-05-05T02:25:44Z",
+    "market": {
+      "by_model": {
+        "samsung s24": {
+          "market_value": 12.5,
+          "max": 350.0,
+          "min": 5.0,
+          "sample_size": 10
+        },
+        "samsung s24 plus": {
+          "market_value": 7.5,
+          "max": 450.0,
+          "min": 5.0,
+          "sample_size": 4
+        }
+      },
+      "global": {
+        "market_value": 10.0,
+        "max": 450.0,
+        "min": 5.0,
+        "sample_size": 14
+      }
+    },
+    "watch_name": "Samsung Galaxy S24"
+  },
+  "a5c8fcba3656049f": {
+    "computed_at": "2026-05-05T02:24:10Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 120.0,
+        "max": 120.0,
+        "min": 120.0,
+        "sample_size": 1
+      }
+    },
+    "watch_name": "Bose QC45"
+  },
+  "a71bbc0fad0ee08b": {
+    "computed_at": "2026-05-05T02:21:38Z",
+    "market": {
+      "by_model": {
+        "samsung a35": {
+          "market_value": 3.0,
+          "max": 3.0,
+          "min": 3.0,
+          "sample_size": 1
+        },
+        "samsung a55": {
+          "market_value": 217.5,
+          "max": 350.0,
+          "min": 150.0,
+          "sample_size": 22
+        }
+      },
+      "global": {
+        "market_value": 217.5,
+        "max": 350.0,
+        "min": 150.0,
+        "sample_size": 22
+      }
+    },
+    "watch_name": "Samsung Galaxy A55"
+  },
+  "a736665608663b05": {
+    "computed_at": "2026-05-05T02:25:35Z",
+    "market": {
+      "by_model": {
+        "iphone 16": {
+          "market_value": 562.5,
+          "max": 690.0,
+          "min": 400.0,
+          "sample_size": 14
+        }
+      },
+      "global": {
+        "market_value": 562.5,
+        "max": 690.0,
+        "min": 400.0,
+        "sample_size": 14
+      }
+    },
+    "watch_name": "iPhone 16"
+  },
+  "aa5b52674603d76d": {
+    "computed_at": "2026-05-05T02:20:43Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 105.0,
+        "max": 220.0,
+        "min": 50.0,
+        "sample_size": 22
+      }
+    },
+    "watch_name": "Monitor 165Hz"
+  },
+  "ab734ce0152ff9fc": {
+    "computed_at": "2026-05-05T02:22:42Z",
+    "market": {
+      "by_model": {
+        "macbook air 13": {
+          "market_value": 974.5,
+          "max": 1150.0,
+          "min": 850.0,
+          "sample_size": 4
+        },
+        "macbook air 15": {
+          "market_value": 900.0,
+          "max": 1000.0,
+          "min": 800.0,
+          "sample_size": 3
+        },
+        "macbook air m3": {
+          "market_value": 765.0,
+          "max": 1000.0,
+          "min": 650.0,
+          "sample_size": 18
+        },
+        "macbook air m3 15": {
+          "market_value": 899.0,
+          "max": 899.0,
+          "min": 899.0,
+          "sample_size": 1
+        }
+      },
+      "global": {
+        "market_value": 800.0,
+        "max": 1050.0,
+        "min": 650.0,
+        "sample_size": 25
+      }
+    },
+    "watch_name": "MacBook Air M3"
+  },
+  "b2dd31ce6a575fea": {
+    "computed_at": "2026-05-05T02:25:04Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 67.5,
+        "max": 119.0,
+        "min": 15.0,
+        "sample_size": 18
+      }
+    },
+    "watch_name": "RAM DDR4 16GB"
+  },
+  "b8f6476b128f8154": {
+    "computed_at": "2026-05-05T02:19:13Z",
+    "market": {
+      "by_model": {
+        "rtx 3060": {
+          "market_value": 222.5,
+          "max": 320.0,
+          "min": 195.0,
+          "sample_size": 14
+        }
+      },
+      "global": {
+        "market_value": 222.5,
+        "max": 320.0,
+        "min": 195.0,
+        "sample_size": 14
+      }
+    },
+    "watch_name": "RTX 3060"
+  },
+  "bbb4150231815b5d": {
+    "computed_at": "2026-05-05T02:19:36Z",
+    "market": {
+      "by_model": {
+        "rtx 3080 ti": {
+          "market_value": 527.5,
+          "max": 749.0,
+          "min": 400.0,
+          "sample_size": 16
+        }
+      },
+      "global": {
+        "market_value": 527.5,
+        "max": 749.0,
+        "min": 400.0,
+        "sample_size": 16
+      }
+    },
+    "watch_name": "RTX 3080 Ti"
+  },
+  "bea6ee9a922956b3": {
+    "computed_at": "2026-05-05T02:27:01Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 295.0,
+        "max": 850.0,
+        "min": 15.0,
+        "sample_size": 6
+      }
+    },
+    "watch_name": "Roborock S8"
+  },
+  "bf89618c6b970931": {
+    "computed_at": "2026-05-05T02:24:06Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 200.0,
+        "max": 200.0,
+        "min": 200.0,
+        "sample_size": 1
+      }
+    },
+    "watch_name": "Sony WH-1000XM5"
+  },
+  "c19aae3262b9aa79": {
+    "computed_at": "2026-05-05T02:20:07Z",
+    "market": {
+      "by_model": {
+        "rtx 4080": {
+          "market_value": 900.0,
+          "max": 1200.0,
+          "min": 780.0,
+          "sample_size": 4
+        }
+      },
+      "global": {
+        "market_value": 900.0,
+        "max": 1200.0,
+        "min": 780.0,
+        "sample_size": 4
+      }
+    },
+    "watch_name": "RTX 4080"
+  },
+  "c253a19749c1953b": {
+    "computed_at": "2026-05-05T02:21:59Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 200.0,
+        "max": 300.0,
+        "min": 160.0,
+        "sample_size": 9
+      }
+    },
+    "watch_name": "Xiaomi 13"
+  },
+  "c4aeab0e17a03929": {
+    "computed_at": "2026-05-05T02:26:18Z",
+    "market": {
+      "by_model": {
+        "ipad gen10": {
+          "market_value": 275.0,
+          "max": 300.0,
+          "min": 219.0,
+          "sample_size": 9
+        }
+      },
+      "global": {
+        "market_value": 275.0,
+        "max": 300.0,
+        "min": 219.0,
+        "sample_size": 9
+      }
+    },
+    "watch_name": "iPad 10"
+  },
+  "c6412013e4e5d7e2": {
+    "computed_at": "2026-05-05T02:22:25Z",
+    "market": {
+      "by_model": {
+        "samsung s8": {
+          "market_value": 300.0,
+          "max": 450.0,
+          "min": 255.0,
+          "sample_size": 5
+        },
+        "samsung s8 plus": {
+          "market_value": 400.0,
+          "max": 460.0,
+          "min": 350.0,
+          "sample_size": 11
+        },
+        "samsung s8 ultra": {
+          "market_value": 480.0,
+          "max": 600.0,
+          "min": 350.0,
+          "sample_size": 7
+        }
+      },
+      "global": {
+        "market_value": 400.0,
+        "max": 550.0,
+        "min": 255.0,
+        "sample_size": 22
+      }
+    },
+    "watch_name": "Samsung Galaxy Tab S8"
+  },
+  "c9d8e1a26b7f1591": {
+    "computed_at": "2026-05-05T02:22:33Z",
+    "market": {
+      "by_model": {
+        "macbook air": {
+          "market_value": 475.0,
+          "max": 475.0,
+          "min": 475.0,
+          "sample_size": 1
+        },
+        "macbook air 13": {
+          "market_value": 550.0,
+          "max": 650.0,
+          "min": 25.0,
+          "sample_size": 5
+        },
+        "macbook air 20": {
+          "market_value": 499.0,
+          "max": 499.0,
+          "min": 499.0,
+          "sample_size": 1
+        },
+        "macbook air m1": {
+          "market_value": 450.0,
+          "max": 650.0,
+          "min": 300.0,
+          "sample_size": 30
+        }
+      },
+      "global": {
+        "market_value": 450.0,
+        "max": 650.0,
+        "min": 300.0,
+        "sample_size": 36
+      }
+    },
+    "watch_name": "MacBook Air M1"
+  },
+  "cd1f51039a7f13b1": {
+    "computed_at": "2026-05-05T02:24:47Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 52.5,
+        "max": 110.0,
+        "min": 14.0,
+        "sample_size": 4
+      }
+    },
+    "watch_name": "Samsung Galaxy Watch"
+  },
+  "cdc7396c2deaeabe": {
+    "computed_at": "2026-05-05T02:23:44Z",
+    "market": {
+      "by_model": {
+        "xbox series s": {
+          "market_value": 175.0,
+          "max": 320.0,
+          "min": 20.0,
+          "sample_size": 14
+        }
+      },
+      "global": {
+        "market_value": 175.0,
+        "max": 320.0,
+        "min": 20.0,
+        "sample_size": 14
+      }
+    },
+    "watch_name": "Xbox Series S"
+  },
+  "cf282ee6cf7a16ac": {
+    "computed_at": "2026-05-05T02:19:39Z",
+    "market": {
+      "by_model": {
+        "rtx 3090": {
+          "market_value": 700.0,
+          "max": 1100.0,
+          "min": 100.0,
+          "sample_size": 9
+        }
+      },
+      "global": {
+        "market_value": 700.0,
+        "max": 1100.0,
+        "min": 100.0,
+        "sample_size": 9
+      }
+    },
+    "watch_name": "RTX 3090"
+  },
+  "cf29d371e1bf3f07": {
+    "computed_at": "2026-05-05T02:24:15Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 120.0,
+        "max": 170.0,
+        "min": 80.0,
+        "sample_size": 3
+      }
+    },
+    "watch_name": "Bose QC35"
+  },
+  "d680b75ce88b2ce5": {
+    "computed_at": "2026-05-05T02:23:22Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "PC Ryzen 7 SSD"
+  },
+  "d6d40a7bc5e4db07": {
+    "computed_at": "2026-05-05T02:22:29Z",
+    "market": {
+      "by_model": {
+        "samsung s9": {
+          "market_value": 500.0,
+          "max": 800.0,
+          "min": 400.0,
+          "sample_size": 3
+        },
+        "samsung s9 fe": {
+          "market_value": 325.0,
+          "max": 450.0,
+          "min": 280.0,
+          "sample_size": 10
+        },
+        "samsung s9 plus": {
+          "market_value": 550.0,
+          "max": 650.0,
+          "min": 490.0,
+          "sample_size": 7
+        },
+        "samsung s9 ultra": {
+          "market_value": 774.5,
+          "max": 899.0,
+          "min": 650.0,
+          "sample_size": 2
+        }
+      },
+      "global": {
+        "market_value": 450.0,
+        "max": 800.0,
+        "min": 280.0,
+        "sample_size": 21
+      }
+    },
+    "watch_name": "Samsung Galaxy Tab S9"
+  },
+  "d7c98cc72d7ce33f": {
+    "computed_at": "2026-05-05T02:25:40Z",
+    "market": {
+      "by_model": {
+        "iphone 16 pro": {
+          "market_value": 700.0,
+          "max": 900.0,
+          "min": 475.0,
+          "sample_size": 18
+        },
+        "iphone 16 pro max": {
+          "market_value": 750.0,
+          "max": 1000.0,
+          "min": 5.0,
+          "sample_size": 30
+        }
+      },
+      "global": {
+        "market_value": 750.0,
+        "max": 1000.0,
+        "min": 475.0,
+        "sample_size": 41
+      }
+    },
+    "watch_name": "iPhone 16 Pro"
+  },
+  "e24c9d8f85baabc7": {
+    "computed_at": "2026-05-05T02:23:40Z",
+    "market": {
+      "by_model": {
+        "switch v1": {
+          "market_value": 38.0,
+          "max": 285.0,
+          "min": 5.0,
+          "sample_size": 49
+        }
+      },
+      "global": {
+        "market_value": 38.0,
+        "max": 285.0,
+        "min": 5.0,
+        "sample_size": 49
+      }
+    },
+    "watch_name": "Nintendo Switch"
+  },
+  "e684c078e45b2cb7": {
+    "computed_at": "2026-05-05T02:20:20Z",
+    "market": {
+      "by_model": {
+        "rx 6600 xt": {
+          "market_value": 195.0,
+          "max": 220.0,
+          "min": 170.0,
+          "sample_size": 10
+        }
+      },
+      "global": {
+        "market_value": 195.0,
+        "max": 220.0,
+        "min": 170.0,
+        "sample_size": 10
+      }
+    },
+    "watch_name": "RX 6600 XT"
+  },
+  "ed8a6db43d90d61a": {
+    "computed_at": "2026-05-05T02:20:34Z",
+    "market": {
+      "by_model": {
+        "rx 7600": {
+          "market_value": 230.0,
+          "max": 250.0,
+          "min": 200.0,
+          "sample_size": 9
+        }
+      },
+      "global": {
+        "market_value": 230.0,
+        "max": 250.0,
+        "min": 200.0,
+        "sample_size": 9
+      }
+    },
+    "watch_name": "RX 7600"
+  },
+  "eecca9f4b13d6a38": {
+    "computed_at": "2026-05-05T02:27:10Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 72.5,
+        "max": 120.0,
+        "min": 50.0,
+        "sample_size": 24
+      }
+    },
+    "watch_name": "Logitech G Pro X Superlight"
+  },
+  "f3be284b1c019006": {
+    "computed_at": "2026-05-05T02:21:47Z",
+    "market": {
+      "by_model": {
+        "samsung zfold2": {
+          "market_value": 674.5,
+          "max": 1099.0,
+          "min": 250.0,
+          "sample_size": 2
+        },
+        "samsung zfold3": {
+          "market_value": 125.0,
+          "max": 300.0,
+          "min": 4.0,
+          "sample_size": 4
+        },
+        "samsung zfold4": {
+          "market_value": 400.0,
+          "max": 450.0,
+          "min": 130.0,
+          "sample_size": 3
+        },
+        "samsung zfold5": {
+          "market_value": 740.0,
+          "max": 800.0,
+          "min": 550.0,
+          "sample_size": 6
+        },
+        "samsung zfold6": {
+          "market_value": 670.0,
+          "max": 850.0,
+          "min": 350.0,
+          "sample_size": 8
+        },
+        "samsung zfold7": {
+          "market_value": 1010.0,
+          "max": 1350.0,
+          "min": 999.0,
+          "sample_size": 9
+        }
+      },
+      "global": {
+        "market_value": 740.0,
+        "max": 1600.0,
+        "min": 4.0,
+        "sample_size": 34
+      }
+    },
+    "watch_name": "Samsung Galaxy Z Fold"
+  },
+  "f3c0572e61fb9a4b": {
+    "computed_at": "2026-05-05T02:24:24Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 100.0,
+        "max": 155.0,
+        "min": 70.0,
+        "sample_size": 17
+      }
+    },
+    "watch_name": "JBL Charge 5"
+  },
+  "f4ad244b3318cdf6": {
+    "computed_at": "2026-05-05T02:26:57Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 200.0,
+        "max": 400.0,
+        "min": 20.0,
+        "sample_size": 18
+      }
+    },
+    "watch_name": "Roborock S7"
+  },
+  "f4dda18c25c6d7ed": {
+    "computed_at": "2026-05-05T02:21:55Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 312.5,
+        "max": 399.0,
+        "min": 250.0,
+        "sample_size": 10
+      }
+    },
+    "watch_name": "Google Pixel 8"
+  },
+  "f6a3f4d73ed46521": {
+    "computed_at": "2026-05-05T02:20:25Z",
+    "market": {
+      "by_model": {
+        "rx 6700 xt": {
+          "market_value": 225.0,
+          "max": 275.0,
+          "min": 180.0,
+          "sample_size": 12
+        }
+      },
+      "global": {
+        "market_value": 225.0,
+        "max": 275.0,
+        "min": 180.0,
+        "sample_size": 12
+      }
+    },
+    "watch_name": "RX 6700 XT"
+  },
+  "f773a7ab52990712": {
+    "computed_at": "2026-05-05T02:26:27Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": 690.0,
+        "max": 900.0,
+        "min": 135.0,
+        "sample_size": 19
+      }
+    },
+    "watch_name": "DJI Mini 4"
+  },
+  "f7db3473b149818f": {
+    "computed_at": "2026-05-05T02:23:36Z",
+    "market": {
+      "by_model": {
+        "switch oled": {
+          "market_value": 200.0,
+          "max": 325.0,
+          "min": 120.0,
+          "sample_size": 36
+        },
+        "switch v1": {
+          "market_value": 15.0,
+          "max": 20.0,
+          "min": 10.0,
+          "sample_size": 2
+        }
+      },
+      "global": {
+        "market_value": 200.0,
+        "max": 325.0,
+        "min": 120.0,
+        "sample_size": 36
+      }
+    },
+    "watch_name": "Nintendo Switch OLED"
+  },
+  "f8e3fc565b49639c": {
+    "computed_at": "2026-05-05T02:21:43Z",
+    "market": {
+      "by_model": {
+        "samsung zflip3": {
+          "market_value": 12.0,
+          "max": 12.0,
+          "min": 12.0,
+          "sample_size": 1
+        },
+        "samsung zflip4": {
+          "market_value": 300.0,
+          "max": 400.0,
+          "min": 35.0,
+          "sample_size": 5
+        },
+        "samsung zflip5": {
+          "market_value": 350.0,
+          "max": 420.0,
+          "min": 250.0,
+          "sample_size": 7
+        },
+        "samsung zflip6": {
+          "market_value": 450.0,
+          "max": 800.0,
+          "min": 420.0,
+          "sample_size": 5
+        },
+        "samsung zflip7": {
+          "market_value": 700.0,
+          "max": 780.0,
+          "min": 550.0,
+          "sample_size": 5
+        }
+      },
+      "global": {
+        "market_value": 375.0,
+        "max": 800.0,
+        "min": 9.0,
+        "sample_size": 26
+      }
+    },
+    "watch_name": "Samsung Galaxy Z Flip"
+  },
+  "f9ebd0cf0f94194b": {
+    "computed_at": "2026-05-05T02:23:06Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "Port\u00e1til i5 SSD"
+  },
+  "fcabf09a5368652a": {
+    "computed_at": "2026-05-05T02:24:37Z",
+    "market": {
+      "by_model": {},
+      "global": {
+        "market_value": null,
+        "max": null,
+        "min": null,
+        "sample_size": 0
+      }
+    },
+    "watch_name": "Apple Watch Series 8"
+  }
+}
