@@ -2,9 +2,42 @@ settings:
   check_interval_minutes: 10
   min_margin_percent: 20
   min_profit_eur: 25
-  request_delay_seconds: 3
+  request_delay_seconds: 3              # legacy: per-host minimum interval
   require_location_match: true
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/123 Safari/537.36"
+
+  # ── Pricing / reliability ─────────────────────────────────────────────────
+  outlier_method: iqr                   # "iqr" or "mad"
+  outlier_iqr_multiplier: 1.0
+  outlier_mad_threshold: 3.5
+  exclude_bundle_listings: true
+  filter_damaged_market_refs: true      # exclude damaged refs from medians
+
+  min_sample_size: 8                    # raw size required before alerting
+  min_filtered_sample_size: 5           # post-trim size required before alerting
+  min_reliability_score: 0.55           # 0..1; below this → "unreliable"
+  min_match_type_for_alert: partial     # "exact" | "partial" | "global"
+  market_cache_ttl_minutes: 60
+  price_drop_threshold_percent: 10
+  seen_max_age_days: 60
+
+  # ── Scraper concurrency / rate limiting (overridable via env vars) ────────
+  # Defaults are conservative to avoid OLX soft-bans. Override per env if you
+  # need to tune in production:
+  #   SCRAPER_GLOBAL_CONCURRENCY, SCRAPER_PER_HOST_CONCURRENCY,
+  #   SCRAPER_MIN_HOST_INTERVAL, WATCH_WORKER_COUNT.
+  scraper:
+    global_concurrency: 4               # max in-flight HTTP requests across all hosts
+    per_host_concurrency: 2             # max in-flight per host (OLX, CustoJusto)
+    min_host_interval_seconds: 0.8      # gate between requests to the same host
+    jitter_min_seconds: 0.5             # randomized sleep before each request
+    jitter_max_seconds: 2.5
+    request_timeout_seconds: 20
+    retry_max_attempts: 3
+    retry_backoff_base_seconds: 1.5     # exponential backoff: base * 2**attempt
+    pause_on_softban_seconds: 90        # full pause for the host after repeated 429/403
+    softban_consecutive_threshold: 3    # how many 429/403 in a row trip the pause
+    watch_worker_count: 4               # per-watchlist thread pool size
 
 location_filter:
   allowed_locations:
@@ -1260,3 +1293,182 @@ watchlists:
       - "https://www.custojusto.pt/portugal/q/synology%20ds920"
     blacklist: []
     max_buy_price: 450
+
+  # ── Additional resale targets (added in v3.1) ───────────────────────────────
+
+  # GPUs (gaps from the v3 list)
+  - name: "RX 6800"
+    keywords: ["rx 6800"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-rx-6800/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-rx-6800/"
+      - "https://www.custojusto.pt/portugal/q/rx%206800"
+    blacklist: ["6800 xt"]
+    max_buy_price: 240
+
+  - name: "RX 6900 XT"
+    keywords: ["rx 6900 xt"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-rx-6900-xt/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-rx-6900-xt/"
+      - "https://www.custojusto.pt/portugal/q/rx%206900%20xt"
+    blacklist: []
+    max_buy_price: 380
+
+  # Consoles (PS5 Slim wasn't yet covered)
+  - name: "PS5 Slim"
+    keywords: ["ps5 slim"]
+    search_urls:
+      - "https://www.olx.pt/q-ps5-slim/"
+    reference_urls:
+      - "https://www.olx.pt/q-ps5-slim/"
+      - "https://www.custojusto.pt/portugal/q/ps5%20slim"
+    blacklist: ["leds", "hdmi avariado", "controlador avariado", "sem leitor"]
+    max_buy_price: 380
+
+  # Apple — MacBook Pro M3 was missing
+  - name: "MacBook Pro M3"
+    keywords: ["macbook pro", "m3"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-macbook-pro-m3/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-macbook-pro-m3/"
+      - "https://www.custojusto.pt/portugal/q/macbook%20pro%20m3"
+    blacklist: ["ecra partido", "teclado avariado", "m1", "m2"]
+    max_buy_price: 1300
+
+  # Audio — JBL flagship speakers
+  - name: "JBL Boombox 3"
+    keywords: ["jbl boombox 3"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/q-jbl-boombox-3/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/q-jbl-boombox-3/"
+      - "https://www.custojusto.pt/portugal/q/jbl%20boombox%203"
+    blacklist: ["replica", "falso", "copia", "bateria viciada"]
+    max_buy_price: 280
+
+  - name: "JBL PartyBox"
+    keywords: ["jbl partybox"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/q-jbl-partybox/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/q-jbl-partybox/"
+      - "https://www.custojusto.pt/portugal/q/jbl%20partybox"
+    blacklist: ["replica", "falso", "copia"]
+    max_buy_price: 250
+
+  # Gaming laptops — explicit lines (different ranges than the generic ones)
+  - name: "Lenovo Legion"
+    keywords: ["lenovo legion"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-lenovo-legion/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-lenovo-legion/"
+      - "https://www.custojusto.pt/portugal/q/lenovo%20legion"
+    blacklist: ["ecra partido", "teclado avariado", "bateria viciada"]
+    max_buy_price: 700
+
+  - name: "ASUS TUF"
+    keywords: ["asus tuf"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-asus-tuf/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-asus-tuf/"
+      - "https://www.custojusto.pt/portugal/q/asus%20tuf"
+    blacklist: ["ecra partido", "teclado avariado", "bateria viciada"]
+    max_buy_price: 600
+
+  - name: "ASUS ROG"
+    keywords: ["asus rog"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-asus-rog/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-asus-rog/"
+      - "https://www.custojusto.pt/portugal/q/asus%20rog"
+    blacklist: ["ecra partido", "teclado avariado", "bateria viciada", "rog ally"]
+    max_buy_price: 850
+
+  - name: "HP Victus"
+    keywords: ["hp victus"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-hp-victus/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-hp-victus/"
+      - "https://www.custojusto.pt/portugal/q/hp%20victus"
+    blacklist: ["ecra partido", "teclado avariado", "bateria viciada"]
+    max_buy_price: 550
+
+  - name: "MSI Gaming"
+    keywords: ["msi", "gaming"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-msi-gaming/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-msi-gaming/"
+      - "https://www.custojusto.pt/portugal/q/msi%20gaming"
+    blacklist: ["ecra partido", "teclado avariado", "bateria viciada"]
+    max_buy_price: 600
+
+  # CPU components
+  - name: "Ryzen 5 5600"
+    keywords: ["ryzen 5 5600"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-ryzen-5-5600/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-ryzen-5-5600/"
+      - "https://www.custojusto.pt/portugal/q/ryzen%205%205600"
+    blacklist: ["5600x3d", "5600g"]
+    max_buy_price: 90
+
+  - name: "Ryzen 7 5800X3D"
+    keywords: ["5800x3d"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-5800x3d/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-5800x3d/"
+      - "https://www.custojusto.pt/portugal/q/5800x3d"
+    blacklist: []
+    max_buy_price: 200
+
+  - name: "Intel i5 12400F"
+    keywords: ["i5 12400f"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-i5-12400f/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-i5-12400f/"
+      - "https://www.custojusto.pt/portugal/q/i5%2012400f"
+    blacklist: []
+    max_buy_price: 110
+
+  - name: "Intel i5 13600K"
+    keywords: ["i5 13600k"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-i5-13600k/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-i5-13600k/"
+      - "https://www.custojusto.pt/portugal/q/i5%2013600k"
+    blacklist: []
+    max_buy_price: 220
+
+  # Memory & storage extras
+  - name: "DDR5 32GB"
+    keywords: ["ddr5", "32gb"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-ddr5-32gb/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-ddr5-32gb/"
+      - "https://www.custojusto.pt/portugal/q/ddr5%2032gb"
+    blacklist: ["ddr4", "erro", "sem testar"]
+    max_buy_price: 110
+
+  - name: "SSD NVMe 2TB"
+    keywords: ["ssd", "nvme", "2tb"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-ssd-nvme-2tb/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/componentes/q-ssd-nvme-2tb/"
+      - "https://www.custojusto.pt/portugal/q/ssd%20nvme%202tb"
+    blacklist: ["erro", "sem testar", "setores defeituosos", "bad sectors"]
+    max_buy_price: 110

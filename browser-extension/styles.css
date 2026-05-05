@@ -1,0 +1,81 @@
+.olx-flip-overlay {
+  margin: 12px 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.olx-flip-card {
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.olx-flip-ok        { background: #ecfdf5; border-color: #34d399; }
+.olx-flip-bad       { background: #fef2f2; border-color: #f87171; }
+.olx-flip-neutral   { background: #f3f4f6; border-color: #9ca3af; }
+.olx-flip-unreliable{ background: #fefce8; border-color: #facc15; }
+.olx-flip-error     { background: #fee2e2; border-color: #f87171; }
+
+.olx-flip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.olx-flip-verdict {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.olx-flip-watch {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.olx-flip-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin-bottom: 10px;
+}
+
+.olx-flip-grid div {
+  font-size: 13px;
+}
+
+.olx-flip-grid b {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+  margin-bottom: 2px;
+}
+
+.olx-flip-reasons {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: #374151;
+}
+
+.olx-flip-reasons li {
+  margin: 1px 0;
+}
+
+.olx-flip-footer {
+  margin-top: 8px;
+  font-size: 11px;
+  opacity: 0.55;
+  text-align: right;
+}
+
+.olx-flip-error-msg {
+  font-size: 13px;
+}

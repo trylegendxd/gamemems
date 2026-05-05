@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "OLX Flip Evaluator",
+  "version": "0.1.0",
+  "description": "Evaluates OLX listings against your private OLX Flip Bot backend and shows a verdict overlay.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.olx.pt/*",
+    "http://localhost/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_title": "OLX Flip Evaluator",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.olx.pt/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {}
+}

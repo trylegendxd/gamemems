@@ -61,3 +61,19 @@ services:
         sync: false
       - key: BASE_URL
         sync: false
+      # ─ Browser-extension API (set EXTENSION_API_TOKEN to enable /api/evaluate)
+      - key: EXTENSION_API_TOKEN
+        sync: false
+      - key: EXTENSION_ALLOWED_ORIGIN
+        sync: false
+      - key: EXTENSION_LIVE_FETCH
+        value: "false"
+      # ─ Scraper concurrency overrides (defaults set in config.yml)
+      - key: SCRAPER_GLOBAL_CONCURRENCY
+        value: "4"
+      - key: SCRAPER_PER_HOST_CONCURRENCY
+        value: "2"
+      - key: SCRAPER_MIN_HOST_INTERVAL
+        value: "0.8"
+      - key: WATCH_WORKER_COUNT
+        value: "4"

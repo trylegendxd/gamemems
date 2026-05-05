@@ -1,4 +1,6 @@
+import logging
 import os
+import random
 import re
 import sys
 import time
@@ -19,11 +21,15 @@ import yaml
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
+import pricing
+
 
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 SEEN_FILE = DATA_DIR / "seen.json"
 MARKET_CACHE_FILE = DATA_DIR / "market_cache.json"
+
+log = logging.getLogger("bot")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Data model
@@ -39,6 +45,7 @@ class Listing:
     raw_text: str = ""
     image_url: str = ""
     description: str = ""
+    condition: str = "unknown"   # new | like_new | used | unknown
 
 
 @dataclass
@@ -46,10 +53,13 @@ class WatchStats:
     name: str
     market_value: Optional[float] = None
     sample_size: int = 0
+    filtered_sample_size: int = 0
+    reliability_score: Optional[float] = None
     listings_seen: int = 0
     skipped_blacklist: int = 0
     skipped_location: int = 0
     skipped_price: int = 0
+    skipped_unreliable: int = 0
     scored: int = 0
     alerts: int = 0
     price_drops: int = 0
@@ -397,50 +407,226 @@ def get_cached_market(cache: Dict, key: str, ttl_minutes: int) -> Optional[Dict]
 # ──────────────────────────────────────────────────────────────────────────────
 
 class MarketplaceScraper:
-    def __init__(self, user_agent: str, delay_seconds: float = 2.5):
+    """
+    HTTP fetcher with controlled concurrency, per-host rate limiting,
+    request jitter, retries with exponential backoff, and soft-ban detection.
+
+    The class is the single integration point for all OLX / CustoJusto fetches
+    so all rate-limiting policy lives here. Two semaphores cap parallelism
+    (global + per-host); a per-host minimum interval and randomized jitter
+    spread requests in time; exponential backoff with jitter handles 429/403
+    and 5xx; persistent 429/403 trips a soft-ban pause for that host.
+    """
+
+    DEFAULT_OPTS = {
+        "global_concurrency": 4,
+        "per_host_concurrency": 2,
+        "min_host_interval_seconds": 0.5,
+        "jitter_min_seconds": 0.5,
+        "jitter_max_seconds": 2.5,
+        "request_timeout_seconds": 20,
+        "retry_max_attempts": 3,
+        "retry_backoff_base_seconds": 1.5,
+        "pause_on_softban_seconds": 90,
+        "softban_consecutive_threshold": 3,
+    }
+
+    def __init__(
+        self,
+        user_agent: str,
+        delay_seconds: Optional[float] = None,   # legacy compat — used as min_host_interval
+        **opts,
+    ):
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": user_agent,
             "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         })
-        self.delay_seconds = delay_seconds
-        # Locks: one for the cache (so two threads don't fetch the same URL
-        # twice) and one per host (so we rate-limit OLX and CustoJusto
-        # independently — different hosts can be hit in parallel).
+        # Resolve options: explicit kwargs > legacy `delay_seconds` > defaults
+        cfg = dict(self.DEFAULT_OPTS)
+        cfg.update({k: v for k, v in opts.items() if v is not None})
+        if delay_seconds is not None and "min_host_interval_seconds" not in opts:
+            cfg["min_host_interval_seconds"] = float(delay_seconds)
+        self.global_concurrency = int(cfg["global_concurrency"])
+        self.per_host_concurrency = int(cfg["per_host_concurrency"])
+        self.min_host_interval = float(cfg["min_host_interval_seconds"])
+        self.jitter_min = float(cfg["jitter_min_seconds"])
+        self.jitter_max = float(cfg["jitter_max_seconds"])
+        self.timeout = float(cfg["request_timeout_seconds"])
+        self.retry_max_attempts = max(1, int(cfg["retry_max_attempts"]))
+        self.retry_backoff_base = float(cfg["retry_backoff_base_seconds"])
+        self.pause_on_softban_seconds = float(cfg["pause_on_softban_seconds"])
+        self.softban_consecutive_threshold = int(cfg["softban_consecutive_threshold"])
+        # Legacy attribute used elsewhere in the module.
+        self.delay_seconds = self.min_host_interval
+
+        # Concurrency primitives
+        self._global_sem = threading.BoundedSemaphore(self.global_concurrency)
+        self._host_sems: Dict[str, threading.BoundedSemaphore] = {}
+        self._host_sems_lock = threading.Lock()
+        self._host_last_request: Dict[str, float] = {}
+        self._host_last_lock = threading.Lock()
+        self._softban_state: Dict[str, Dict[str, float]] = {}
+        self._softban_lock = threading.Lock()
+
+        # Per-URL response cache + in-flight coalescing
         self._cache_lock = threading.Lock()
         self._cache: Dict[str, List[Listing]] = {}
         self._inflight: Dict[str, threading.Event] = {}
-        self._host_locks: Dict[str, threading.Lock] = {}
-        self._host_locks_lock = threading.Lock()
 
-    def _host_lock(self, url: str) -> threading.Lock:
-        host = urlparse(url).netloc
-        with self._host_locks_lock:
-            lock = self._host_locks.get(host)
-            if lock is None:
-                lock = threading.Lock()
-                self._host_locks[host] = lock
-            return lock
+    @classmethod
+    def from_config(cls, config: Dict) -> "MarketplaceScraper":
+        s = config.get("settings", {}) or {}
+        scraper_cfg = s.get("scraper", {}) or {}
+        # Environment overrides win over config (deploy-friendly).
+        def _env(name: str, default):
+            v = os.getenv(name)
+            return v if v is not None else default
+        return cls(
+            user_agent=s.get("user_agent", "Mozilla/5.0"),
+            delay_seconds=s.get("request_delay_seconds"),
+            global_concurrency=int(_env("SCRAPER_GLOBAL_CONCURRENCY",
+                                        scraper_cfg.get("global_concurrency", 4))),
+            per_host_concurrency=int(_env("SCRAPER_PER_HOST_CONCURRENCY",
+                                          scraper_cfg.get("per_host_concurrency", 2))),
+            min_host_interval_seconds=float(_env("SCRAPER_MIN_HOST_INTERVAL",
+                                                 scraper_cfg.get("min_host_interval_seconds",
+                                                                 s.get("request_delay_seconds", 0.8)))),
+            jitter_min_seconds=float(scraper_cfg.get("jitter_min_seconds", 0.5)),
+            jitter_max_seconds=float(scraper_cfg.get("jitter_max_seconds", 2.5)),
+            request_timeout_seconds=float(scraper_cfg.get("request_timeout_seconds", 20)),
+            retry_max_attempts=int(scraper_cfg.get("retry_max_attempts", 3)),
+            retry_backoff_base_seconds=float(scraper_cfg.get("retry_backoff_base_seconds", 1.5)),
+            pause_on_softban_seconds=float(scraper_cfg.get("pause_on_softban_seconds", 90)),
+            softban_consecutive_threshold=int(scraper_cfg.get("softban_consecutive_threshold", 3)),
+        )
+
+    # ── concurrency primitives ─────────────────────────────────────────────
+
+    def _get_host_sem(self, host: str) -> threading.BoundedSemaphore:
+        with self._host_sems_lock:
+            sem = self._host_sems.get(host)
+            if sem is None:
+                sem = threading.BoundedSemaphore(self.per_host_concurrency)
+                self._host_sems[host] = sem
+            return sem
+
+    def _respect_min_interval(self, host: str) -> None:
+        with self._host_last_lock:
+            last = self._host_last_request.get(host, 0.0)
+        gap = time.time() - last
+        if gap < self.min_host_interval:
+            time.sleep(self.min_host_interval - gap)
+
+    def _update_last_request(self, host: str) -> None:
+        with self._host_last_lock:
+            self._host_last_request[host] = time.time()
+
+    def _record_softban(self, host: str, status_code: int) -> None:
+        with self._softban_lock:
+            st = self._softban_state.setdefault(host, {"consecutive": 0, "until": 0.0})
+            st["consecutive"] = float(st.get("consecutive", 0)) + 1
+            if int(st["consecutive"]) >= self.softban_consecutive_threshold:
+                st["until"] = time.time() + self.pause_on_softban_seconds
+                log.error(
+                    "[SOFTBAN] host=%s status=%d consecutive=%d → pausing for %ds",
+                    host, status_code, int(st["consecutive"]),
+                    int(self.pause_on_softban_seconds),
+                )
+
+    def _reset_softban(self, host: str) -> None:
+        with self._softban_lock:
+            st = self._softban_state.get(host)
+            if st is not None:
+                st["consecutive"] = 0
+                st["until"] = 0.0
+
+    def _wait_out_softban(self, host: str) -> None:
+        with self._softban_lock:
+            st = self._softban_state.get(host) or {}
+            until = float(st.get("until", 0.0))
+        wait = until - time.time()
+        if wait > 0:
+            log.warning("[SOFTBAN] %s still active — sleeping %.1fs", host, wait)
+            time.sleep(wait)
+
+    def _backoff_delay(self, attempt: int) -> float:
+        return self.retry_backoff_base * (2 ** attempt) + random.uniform(0, 0.75)
+
+    # ── single-URL fetch with retries & ban handling ───────────────────────
 
     def fetch_html(self, url: str) -> str:
-        # Per-host serialization: requests to the same host honour the delay,
-        # but different hosts run in parallel (OLX + CustoJusto concurrently).
-        with self._host_lock(url):
-            time.sleep(self.delay_seconds)
-            r = self.session.get(url, timeout=25)
-            # On 404 try category-stripping fallbacks before giving up. OLX
-            # renames category slugs over time, and the user's URLs may be
-            # slightly stale ("/audio/" no longer exists, etc.). The fallback
-            # walks up the path and finally hits the host-wide search.
-            if r.status_code == 404:
-                for fallback in self._fallback_urls(url):
-                    fr = self.session.get(fallback, timeout=25)
-                    if fr.ok:
-                        print(f"  [INFO] 404 em {url} — usando fallback {fallback}")
-                        return fr.text
-            r.raise_for_status()
-            return r.text
+        host = urlparse(url).netloc
+        with self._global_sem:
+            host_sem = self._get_host_sem(host)
+            with host_sem:
+                self._wait_out_softban(host)
+                self._respect_min_interval(host)
+                if self.jitter_max > 0:
+                    time.sleep(random.uniform(self.jitter_min, self.jitter_max))
+
+                last_error: Optional[str] = None
+                for attempt in range(self.retry_max_attempts):
+                    try:
+                        r = self.session.get(url, timeout=self.timeout)
+                    except requests.RequestException as e:
+                        last_error = f"{type(e).__name__}: {e}"
+                        delay = self._backoff_delay(attempt)
+                        log.warning(
+                            "[FETCH] %s attempt=%d/%d FAIL (%s) — retry in %.1fs",
+                            url, attempt + 1, self.retry_max_attempts, last_error, delay,
+                        )
+                        time.sleep(delay)
+                        continue
+                    self._update_last_request(host)
+
+                    # Soft-ban indicators
+                    if r.status_code in (403, 429):
+                        self._record_softban(host, r.status_code)
+                        delay = self._backoff_delay(attempt)
+                        log.warning(
+                            "[FETCH] %s -> %d (%s) — backing off %.1fs",
+                            url, r.status_code,
+                            r.headers.get("Retry-After", "no-retry-after"),
+                            delay,
+                        )
+                        # Honor Retry-After if longer than our backoff
+                        try:
+                            ra = float(r.headers.get("Retry-After", "0"))
+                        except (TypeError, ValueError):
+                            ra = 0.0
+                        time.sleep(max(delay, ra))
+                        continue
+
+                    # Transient server errors
+                    if r.status_code >= 500:
+                        delay = self._backoff_delay(attempt)
+                        log.warning("[FETCH] %s -> %d, retry in %.1fs", url, r.status_code, delay)
+                        time.sleep(delay)
+                        continue
+
+                    # 404 → category-rename fallback (kept from previous behavior)
+                    if r.status_code == 404:
+                        for fallback in self._fallback_urls(url):
+                            try:
+                                fr = self.session.get(fallback, timeout=self.timeout)
+                            except requests.RequestException:
+                                continue
+                            self._update_last_request(host)
+                            if fr.ok:
+                                log.info("[FETCH] 404 %s → fallback %s OK", url, fallback)
+                                self._reset_softban(host)
+                                return fr.text
+                        r.raise_for_status()
+
+                    r.raise_for_status()
+                    self._reset_softban(host)
+                    return r.text
+
+                raise RuntimeError(
+                    f"giving up on {url} after {self.retry_max_attempts} attempts ({last_error})"
+                )
 
     @staticmethod
     def _fallback_urls(url: str) -> List[str]:
@@ -538,6 +724,8 @@ class MarketplaceScraper:
                 if image_url and not image_url.startswith("http"):
                     image_url = urljoin("https://www.olx.pt", image_url)
 
+            condition = pricing.detect_condition(f"{title} {raw_text}")
+
             listings.append(Listing(
                 title=title[:160],
                 price=price,
@@ -546,6 +734,7 @@ class MarketplaceScraper:
                 location=location,
                 raw_text=raw_text,
                 image_url=image_url,
+                condition=condition,
             ))
 
         return dedupe_listings(listings)
@@ -598,6 +787,8 @@ class MarketplaceScraper:
             raw_text = clean_text(f"{title} {body} {location}")[:1000]
             image_url = it.get("imageFullURL") or ""
 
+            condition = pricing.detect_condition(f"{title} {body}")
+
             listings.append(Listing(
                 title=title[:160],
                 price=price,
@@ -607,6 +798,7 @@ class MarketplaceScraper:
                 image_url=image_url,
                 location=location,
                 raw_text=raw_text,
+                condition=condition,
             ))
 
         return dedupe_listings(listings)
@@ -681,33 +873,14 @@ class MarketplaceScraper:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def dedupe_listings(items: Iterable[Listing]) -> List[Listing]:
-    seen = set()
-    out = []
-    for item in items:
-        key = item.url.split("?")[0]
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(item)
-    return out
+    """Deduplicate by canonical URL first, then by (title token-set, price bucket)
+    so cross-posted ads and slightly-edited reposts collapse into one entry."""
+    return pricing.dedupe_by_signature(items, price_tolerance_pct=3.0)
 
 
 def remove_outliers(prices: List[float], iqr_multiplier: float = 1.0) -> List[float]:
-    """
-    Trim Tukey-style outliers. Default multiplier is 1.0 (tighter than the
-    classic 1.5) because second-hand prices have a long right tail of bundle
-    listings (e.g. "PC + RTX 3060" lumped into a GPU search) and a short
-    left tail of bait/scam listings — we want both pruned aggressively.
-    """
-    prices = sorted(p for p in prices if p and p > 0)
-    if len(prices) < 5:
-        return prices
-    q1 = statistics.quantiles(prices, n=4)[0]
-    q3 = statistics.quantiles(prices, n=4)[2]
-    iqr = q3 - q1
-    low = max(0, q1 - iqr_multiplier * iqr)
-    high = q3 + iqr_multiplier * iqr
-    return [p for p in prices if low <= p <= high]
+    """Backwards-compatible wrapper around pricing.trim_outliers_iqr."""
+    return pricing.trim_outliers_iqr(prices, multiplier=iqr_multiplier)
 
 
 # Hardware terms grouped by category. A title matching ≥2 different categories
@@ -741,16 +914,17 @@ def combined_blacklist(config: Dict, watch: Dict) -> List[str]:
 # Market value estimation
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _build_market_stats(prices: List[float], iqr_mult: float = 1.0) -> Dict:
-    prices = remove_outliers(prices, iqr_multiplier=iqr_mult)
-    if not prices:
-        return {"market_value": None, "sample_size": 0, "min": None, "max": None}
-    return {
-        "market_value": round(statistics.median(prices), 2),
-        "sample_size": len(prices),
-        "min": min(prices),
-        "max": max(prices),
-    }
+def _build_market_stats(prices: List[float], iqr_mult: float = 1.0,
+                        method: str = "iqr", mad_threshold: float = 3.5) -> Dict:
+    """Compute median + dispersion for a price list (delegates to pricing)."""
+    return pricing.build_market_stats(
+        prices,
+        {
+            "outlier_method": method,
+            "outlier_iqr_multiplier": iqr_mult,
+            "outlier_mad_threshold": mad_threshold,
+        },
+    )
 
 
 def estimate_market_value(
@@ -763,18 +937,24 @@ def estimate_market_value(
 ) -> Dict:
     """
     Returns a market dict with two levels:
-      - "by_model": {model_key -> stats_dict}  ← per-model price comparison
-      - "global":   stats_dict                  ← fallback when model unknown
+      - "by_model": {model_key -> stats_dict}
+      - "global":   stats_dict
+      - "raw_count": total references seen
+      - "filter_dropped": dict of how many were dropped at each stage
 
-    Reference data is filtered three ways for accuracy:
+    Reference data is filtered four ways for accuracy:
       1. keyword match (must contain the watched terms)
-      2. blacklist (no "para peças", "avariada", etc.)
-      3. bundle detection (no full PCs in a GPU watchlist, etc.)
-    Then Tukey IQR outlier trimming is applied.
+      2. user blacklist (config + watch-level)
+      3. damage keyword filter (built-in DAMAGE_KEYWORDS)
+      4. bundle detection (no full PCs in a GPU watchlist, etc.)
+    Then outlier trimming (IQR or MAD, configurable) is applied.
     """
     cfg_settings = (config or {}).get("settings", {})
     iqr_mult = cfg_settings.get("outlier_iqr_multiplier", 1.0)
+    method = cfg_settings.get("outlier_method", "iqr")
+    mad_threshold = cfg_settings.get("outlier_mad_threshold", 3.5)
     exclude_bundles = cfg_settings.get("exclude_bundle_listings", True)
+    apply_damage_filter = cfg_settings.get("filter_damaged_market_refs", True)
 
     unique_refs = [u for u in reference_urls if u not in search_urls]
     all_ref_urls = search_urls + unique_refs
@@ -784,26 +964,31 @@ def estimate_market_value(
         try:
             refs.extend(scraper.scrape_url(url))
         except Exception as e:
-            print(f"  [WARN] reference scrape failed {url}: {e}")
+            log.warning("[REF] scrape failed %s: %s", url, e)
 
-    # Filter: keyword + blacklist + bundle detection (the last one only for
-    # market-reference purposes; we still process bundles as candidate flips
-    # if they pass the listing-side filters).
-    filtered = []
-    bundles_excluded = 0
+    # Run all filters; track drop reasons for observability.
+    dropped = {"no_price": 0, "keyword": 0, "blacklist": 0, "damage": 0, "bundle": 0}
+    filtered: List[Listing] = []
     for item in refs:
         if item.price is None:
+            dropped["no_price"] += 1
             continue
         if not title_matches(item.title, keywords):
+            dropped["keyword"] += 1
             continue
         combined_text = " ".join([item.title, item.raw_text])
         if find_blacklist(combined_text, blacklist):
+            dropped["blacklist"] += 1
+            continue
+        if apply_damage_filter and pricing.find_damage_keyword(combined_text):
+            dropped["damage"] += 1
             continue
         if exclude_bundles and looks_like_bundle(item.title):
-            bundles_excluded += 1
+            dropped["bundle"] += 1
             continue
         filtered.append(item)
 
+    # Group by model fingerprint for tighter comparisons.
     by_model: Dict[str, List[float]] = {}
     global_prices: List[float] = []
     for item in filtered:
@@ -812,22 +997,33 @@ def estimate_market_value(
         if key:
             by_model.setdefault(key, []).append(item.price)
 
-    model_stats = {k: _build_market_stats(v, iqr_mult) for k, v in by_model.items()}
-    global_stats = _build_market_stats(global_prices, iqr_mult)
+    stats_opts = {
+        "outlier_method": method,
+        "outlier_iqr_multiplier": iqr_mult,
+        "outlier_mad_threshold": mad_threshold,
+    }
+    model_stats = {k: pricing.build_market_stats(v, stats_opts) for k, v in by_model.items()}
+    global_stats = pricing.build_market_stats(global_prices, stats_opts)
 
     if model_stats:
-        sample_info = ", ".join(f"{k}({v['sample_size']})" for k, v in sorted(model_stats.items()))
-        print(f"  [MARKET-MODELS] {sample_info}")
-    if bundles_excluded:
-        print(f"  [MARKET-CLEAN] {bundles_excluded} bundles excluídos do cálculo")
+        sample_info = ", ".join(
+            f"{k}({v['filtered_sample_size']}/{v['sample_size']})"
+            for k, v in sorted(model_stats.items())
+        )
+        log.info("[MARKET-MODELS] %s", sample_info)
+    drops_summary = ", ".join(f"{k}={v}" for k, v in dropped.items() if v) or "none"
+    log.info("[MARKET-FILTER] refs=%d filtered=%d dropped(%s)",
+             len(refs), len(filtered), drops_summary)
     if not filtered and refs:
-        print(f"  [WARN] {len(refs)} anúncios encontrados mas todos filtrados (keywords/blacklist/bundle)")
+        log.warning("[MARKET] %d refs but ALL filtered out — relax keywords/blacklist?", len(refs))
     elif not refs:
-        print(f"  [WARN] scrape devolveu 0 anúncios — verificar URLs de referência")
+        log.warning("[MARKET] 0 refs — check reference URLs")
 
     return {
         "by_model": model_stats,
-        "global":   global_stats,
+        "global": global_stats,
+        "raw_count": len(refs),
+        "filter_dropped": dropped,
     }
 
 
@@ -856,46 +1052,115 @@ def get_market_for_listing(market: Dict, listing: "Listing") -> Dict:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def score_listing(listing: Listing, market_stats: Dict, cfg: Dict) -> Dict:
-    min_margin = cfg["settings"].get("min_margin_percent", 20)
-    min_profit = cfg["settings"].get("min_profit_eur", 25)
-    min_sample = cfg["settings"].get("min_sample_size", 8)
+    """Score a listing against pre-computed market stats.
 
-    if listing.price is None:
-        return {"alert": False, "reason": "No seller price"}
+    Returns a dict containing the legacy keys (`alert`, `profit`, `margin_percent`,
+    `market_value`, `market_sample_size`, `match_type`, `reason`) plus the new
+    keys (`filtered_sample_size`, `reliability_score`, `reasons`, `verdict`,
+    `condition`) used by the dashboard / browser extension.
+    """
+    s = cfg.get("settings", {}) or {}
+    min_margin = s.get("min_margin_percent", 20)
+    min_profit = s.get("min_profit_eur", 25)
+    min_sample = s.get("min_sample_size", 8)
+    min_filtered = s.get("min_filtered_sample_size", max(5, int(min_sample * 0.6)))
+    min_reliability = s.get("min_reliability_score", 0.5)
+    min_match_pref = s.get("min_match_type_for_alert", "partial")  # exact|partial|global
+
+    match_type_raw = market_stats.get("_match", "global")
+    match_type = match_type_raw.split(":")[0]
 
     market_value = market_stats.get("market_value")
-    if market_value is None:
-        return {"alert": False, "reason": "No market reference"}
-
     sample_size = market_stats.get("sample_size", 0)
-    if sample_size < min_sample:
-        # Not enough data to trust — score it but don't alert.
-        profit = market_value - listing.price
-        margin_percent = ((market_value / listing.price) - 1) * 100
-        return {
-            "alert": False,
-            "profit": round(profit, 2),
-            "margin_percent": round(margin_percent, 1),
-            "market_value": market_value,
-            "market_sample_size": sample_size,
-            "match_type": market_stats.get("_match", "global"),
-            "reason": f"Amostra insuficiente ({sample_size}<{min_sample})",
-        }
+    filtered_sample = market_stats.get("filtered_sample_size", sample_size)
+    iqr_rel = market_stats.get("iqr_relative")
+    reliability = pricing.compute_reliability(
+        filtered_sample=filtered_sample,
+        raw_sample=sample_size,
+        match_type=match_type,
+        iqr_relative=iqr_rel,
+    )
+
+    # Default skeleton populated regardless of branch
+    base = {
+        "alert": False,
+        "profit": None,
+        "margin_percent": None,
+        "market_value": market_value,
+        "market_sample_size": int(sample_size),
+        "filtered_sample_size": int(filtered_sample),
+        "reliability_score": reliability,
+        "match_type": match_type,
+        "verdict": "unreliable",
+        "condition": getattr(listing, "condition", "unknown"),
+        "reasons": [],
+        "reason": "",
+    }
+
+    if listing.price is None:
+        base["reasons"].append("Anúncio sem preço")
+        base["reason"] = base["reasons"][0]
+        return base
+
+    if market_value is None:
+        base["reasons"].append("Sem referência de mercado")
+        base["reason"] = base["reasons"][0]
+        return base
 
     profit = market_value - listing.price
     margin_percent = ((market_value / listing.price) - 1) * 100
-    alert = margin_percent >= min_margin and profit >= min_profit
-    match_type = market_stats.get("_match", "global")
+    base["profit"] = round(profit, 2)
+    base["margin_percent"] = round(margin_percent, 1)
 
-    return {
-        "alert": alert,
-        "profit": round(profit, 2),
-        "margin_percent": round(margin_percent, 1),
-        "market_value": market_value,
-        "market_sample_size": market_stats.get("sample_size", 0),
-        "match_type": match_type,
-        "reason": f"Mediana de mercado {round(margin_percent, 1)}% acima do preço pedido [{match_type}]",
-    }
+    # Reliability gate — never alert if the market sample is too thin or noisy.
+    match_rank = {"global": 0, "partial": 1, "exact": 2}
+    pref_rank = match_rank.get(min_match_pref, 1)
+    has_match_precision = match_rank.get(match_type, 0) >= pref_rank
+
+    if (
+        sample_size < min_sample
+        or filtered_sample < min_filtered
+        or reliability < min_reliability
+        or not has_match_precision
+    ):
+        base["reasons"].append(
+            f"Amostra insuficiente ou pouco fiável "
+            f"(filtered={filtered_sample}/{sample_size}, reliability={reliability:.2f}, "
+            f"match={match_type})"
+        )
+        base["reason"] = base["reasons"][0]
+        return base
+
+    # Damage / risk-keyword check on the candidate (we already filtered the
+    # market pool; a damage keyword on the candidate flips it to bad_deal).
+    text_for_damage = " ".join([listing.title, listing.raw_text])
+    damage_word = pricing.find_damage_keyword(text_for_damage)
+    if damage_word:
+        base["reasons"].append(
+            f"Sinalizado: palavra-chave de risco '{damage_word}'"
+        )
+        base["verdict"] = "bad_deal"
+        base["reason"] = base["reasons"][0]
+        return base
+
+    if margin_percent >= min_margin and profit >= min_profit:
+        base["alert"] = True
+        base["verdict"] = "good_deal"
+    elif listing.price > market_value * 1.05:
+        base["verdict"] = "bad_deal"
+    else:
+        base["verdict"] = "neutral"
+
+    base["reasons"] = [
+        f"Preço {listing.price:.0f}€ vs mediana {market_value:.0f}€ "
+        f"(margem {margin_percent:.1f}%)",
+        f"{filtered_sample} comparáveis após filtragem (de {sample_size} brutos, match {match_type})",
+        f"Fiabilidade {reliability:.2f}",
+    ]
+    if iqr_rel is not None:
+        base["reasons"].append(f"Dispersão IQR/mediana = {iqr_rel:.2f}")
+    base["reason"] = base["reasons"][0]
+    return base
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -939,16 +1204,23 @@ def format_alert(
         )
     else:
         header = "🔥 Possível flip lucrativo\n\n"
+    filtered = score.get("filtered_sample_size", score.get("market_sample_size", "?"))
+    raw_sample = score.get("market_sample_size", "?")
+    reliability = score.get("reliability_score")
+    rel_str = f"{reliability:.2f}" if isinstance(reliability, (int, float)) else "?"
+    cond = score.get("condition", "unknown")
+    cond_line = f"Condição detectada: {cond}\n" if cond and cond != "unknown" else ""
     return (
         f"{header}"
         f"Categoria: {watch_name}\n"
         f"Artigo: {listing.title}\n"
         f"{model_line}"
+        f"{cond_line}"
         f"Preço do vendedor: {listing.price:.0f}€\n"
         f"Mediana de mercado: {score['market_value']:.0f}€  ({compare_note})\n"
         f"Lucro estimado: {score['profit']:.0f}€\n"
         f"Margem: {score['margin_percent']}%\n"
-        f"Amostra de referência: {score['market_sample_size']} anúncios\n"
+        f"Amostra: {filtered}/{raw_sample} comparáveis | Fiabilidade: {rel_str}\n"
         f"Localização: {loc_display}\n\n"
         f"Fonte: {listing.source}\n"
         f"{listing.url}"
@@ -988,7 +1260,7 @@ def process_watch(
     blacklist = combined_blacklist(config, watch)
     drop_threshold = config["settings"].get("price_drop_threshold_percent", 10) / 100
 
-    print(f"\n[WATCH] {watch['name']}")
+    log.info("[WATCH-START] %s", watch["name"])
 
     # Cross-cycle market cache: reference data doesn't change every 10 min,
     # so reuse it for `market_cache_ttl_minutes` (default 60). The first cycle
@@ -1001,7 +1273,7 @@ def process_watch(
         with market_cache_lock:
             market = get_cached_market(market_cache, cache_key, ttl)
     if market is not None:
-        print(f"  [MARKET-CACHED] reused (TTL {ttl} min)")
+        log.info("[MARKET-CACHED] %s reused (TTL %d min)", watch["name"], ttl)
     else:
         market = estimate_market_value(
             scraper,
@@ -1021,15 +1293,27 @@ def process_watch(
     global_stats = market.get("global", {})
     stats.market_value = global_stats.get("market_value")
     stats.sample_size = global_stats.get("sample_size", 0)
-    g_val_str = f"{stats.market_value}€" if stats.market_value is not None else "None€"
-    print(f"  [MARKET-GLOBAL] valor={g_val_str}  amostra={stats.sample_size}  intervalo=[{global_stats.get('min')}, {global_stats.get('max')}]")
+    stats.filtered_sample_size = global_stats.get("filtered_sample_size", 0)
+    g_reliability = pricing.compute_reliability(
+        filtered_sample=stats.filtered_sample_size,
+        raw_sample=stats.sample_size,
+        match_type="global",
+        iqr_relative=global_stats.get("iqr_relative"),
+    )
+    stats.reliability_score = g_reliability
+    g_val_str = f"{stats.market_value}€" if stats.market_value is not None else "—"
+    log.info(
+        "[WATCH] %s market=%s filtered=%d/%d reliability=%.2f range=[%s,%s]",
+        watch["name"], g_val_str, stats.filtered_sample_size, stats.sample_size,
+        g_reliability, global_stats.get("min"), global_stats.get("max"),
+    )
 
     for search_url in watch["search_urls"]:
         try:
             listings = scraper.scrape_url(search_url)
         except Exception as e:
             stats.errors += 1
-            print(f"  [WARN] falhou scrape {search_url}: {e}")
+            log.warning("[SCRAPE-FAIL] %s url=%s err=%s", watch["name"], search_url, e)
             continue
 
         for listing in listings:
@@ -1048,7 +1332,8 @@ def process_watch(
                 if (prev_price and listing.price
                         and listing.price < prev_price * (1 - drop_threshold)):
                     is_price_drop = True
-                    print(f"  [PRICE-DROP] {prev_price}EUR -> {listing.price}EUR: {listing.title[:50]}")
+                    log.info("[PRICE-DROP] %s %s€ → %s€: %s",
+                             watch["name"], prev_price, listing.price, listing.title[:50])
                 else:
                     continue
 
@@ -1056,10 +1341,17 @@ def process_watch(
                 listing.title, listing.raw_text, listing.location, listing.url,
             ])
 
+            # 1) User-supplied blacklist (per-watch + global)
             bad_word = find_blacklist(text_for_filter, blacklist)
-            if bad_word:
+            # 2) Built-in damage/risk vocabulary (configurable: bypass when the
+            #    watchlist explicitly opts in via `allow_damaged: true`).
+            damage_word = None
+            if not watch.get("allow_damaged", False):
+                damage_word = pricing.find_damage_keyword(text_for_filter)
+            if bad_word or damage_word:
+                hit = bad_word or damage_word
                 stats.skipped_blacklist += 1
-                print(f"  [SKIP-BL] '{bad_word}': {listing.title[:70]}")
+                log.info("[SKIP-BL] %s '%s': %s", watch["name"], hit, listing.title[:70])
                 new_seen[key] = {"first": _now_iso(), "price": listing.price}
                 continue
 
@@ -1073,10 +1365,12 @@ def process_watch(
                 has_location_info = bool(listing.location.strip())
                 if has_location_info:
                     stats.skipped_location += 1
-                    print(f"  [SKIP-LOC] fora da área: {listing.title[:70]} | loc={listing.location}")
+                    log.info("[SKIP-LOC] %s out-of-area loc=%s | %s",
+                             watch["name"], listing.location, listing.title[:70])
                     new_seen[key] = {"first": _now_iso(), "price": listing.price}
                     continue
-                print(f"  [WARN-LOC] sem localização detectada, a incluir: {listing.title[:70]}")
+                log.info("[WARN-LOC] %s no location detected, including: %s",
+                         watch["name"], listing.title[:70])
 
             max_buy = watch.get("max_buy_price")
             if max_buy and listing.price and listing.price > max_buy:
@@ -1089,7 +1383,22 @@ def process_watch(
             loc_display = listing.location or location_hit or "—"
             model_key = extract_model_key(listing.title) or "?"
             stats.scored += 1
-            print(f"  [SCORE] {listing.price}€ | margem={score.get('margin_percent','?')}% | modelo={model_key} | match={score.get('match_type','?')} | {listing.title[:45]}")
+            verdict = score.get("verdict", "?")
+            if verdict == "unreliable":
+                stats.skipped_unreliable += 1
+            log.info(
+                "[SCORE] %s price=%s margin=%s%% verdict=%s reliability=%s filtered=%s/%s match=%s model=%s | %s",
+                watch["name"],
+                listing.price,
+                score.get("margin_percent", "?"),
+                verdict,
+                score.get("reliability_score", "?"),
+                score.get("filtered_sample_size", "?"),
+                score.get("market_sample_size", "?"),
+                score.get("match_type", "?"),
+                model_key,
+                listing.title[:60],
+            )
 
             # ── Alert gating ──────────────────────────────────────────────────
             # Two layers prevent duplicate alerts:
@@ -1129,6 +1438,9 @@ def process_watch(
                         bw = find_blacklist(text_for_filter, blacklist)
                         if bw:
                             risk_words.append(bw)
+                        # Compose a multi-line reason from the structured list
+                        reasons_list = score.get("reasons") or [score.get("reason") or ""]
+                        reason_blob = " | ".join(r for r in reasons_list if r)
                         deal_payload = {
                             "url": listing.url,
                             "title": listing.title,
@@ -1144,13 +1456,13 @@ def process_watch(
                             "category": watch["name"],
                             "search_term": ", ".join(watch.get("keywords", [])),
                             "description": listing.description or listing.raw_text[:500],
-                            "reason": score.get("reason"),
+                            "reason": reason_blob,
                             "risk_flags": risk_words,
                             "telegram_sent": False,
                         }
                         deal_dashboard_url = on_deal_callback(deal_payload)
                     except Exception as e:
-                        print(f"  [WARN] DB save failed: {e}")
+                        log.warning("[DB-SAVE-FAIL] %s: %s", watch["name"], e)
 
                 try:
                     prev_price_for_alert = previous.get("price") if (previous and is_price_drop) else None
@@ -1166,7 +1478,8 @@ def process_watch(
                         stats.price_drops += 1
                     else:
                         stats.alerts += 1
-                    print(f"  [ALERT] Telegram enviado!")
+                    log.info("[ALERT-OK] %s telegram sent | %s",
+                             watch["name"], listing.title[:60])
 
                     # Mark the deal as telegram_sent now that it succeeded.
                     if on_deal_callback is not None:
@@ -1181,7 +1494,7 @@ def process_watch(
                     if alerted_this_cycle is not None and alerted_lock is not None:
                         with alerted_lock:
                             alerted_this_cycle.discard(key)
-                    print(f"  [WARN] Telegram falhou: {e}")
+                    log.warning("[ALERT-FAIL] %s telegram failed: %s", watch["name"], e)
 
             entry = {
                 "first": (previous or {}).get("first") or _now_iso(),
@@ -1204,15 +1517,26 @@ def process_watch(
 def run_once(config: Dict, token: str, chat_id: str, on_deal_callback=None) -> List[WatchStats]:
     t0 = time.time()
     seen = load_seen()
-    scraper = MarketplaceScraper(
-        user_agent=config["settings"]["user_agent"],
-        delay_seconds=config["settings"].get("request_delay_seconds", 2.5),
-    )
+    scraper = MarketplaceScraper.from_config(config)
 
     allowed_locations = config.get("location_filter", {}).get("allowed_locations", [])
     require_location = config["settings"].get("require_location_match", True)
 
-    max_workers = min(3, len(config["watchlists"]))
+    # Per-watchlist worker count. Defaults to 3 (legacy) but bumps to the
+    # global concurrency if configured higher; the underlying global semaphore
+    # in MarketplaceScraper is the real cap.
+    s = config.get("settings", {}) or {}
+    max_workers = int(
+        os.getenv("WATCH_WORKER_COUNT")
+        or (s.get("scraper", {}) or {}).get("watch_worker_count")
+        or min(3, len(config["watchlists"]))
+    )
+    max_workers = max(1, min(max_workers, len(config["watchlists"])))
+    log.info(
+        "[CYCLE] watchlists=%d worker_pool=%d global_concurrency=%d per_host=%d",
+        len(config["watchlists"]), max_workers,
+        scraper.global_concurrency, scraper.per_host_concurrency,
+    )
     all_new_seen: Dict[str, Dict] = {}
     all_stats: List[WatchStats] = []
     alerted_this_cycle: set = set()
@@ -1240,7 +1564,7 @@ def run_once(config: Dict, token: str, chat_id: str, on_deal_callback=None) -> L
                 all_new_seen.update(new_entries)
                 all_stats.append(stats)
             except Exception as e:
-                print(f"[ERROR] watchlist '{name}': {e}")
+                log.exception("[WATCH-ERROR] '%s': %s", name, e)
                 all_stats.append(WatchStats(name=name, errors=1))
 
     seen.update(all_new_seen)
@@ -1257,20 +1581,176 @@ def _print_cycle_summary(stats: List[WatchStats], elapsed: float, seen_count: in
     total_alerts = sum(s.alerts for s in stats)
     total_drops = sum(s.price_drops for s in stats)
     total_scored = sum(s.scored for s in stats)
-    total_skipped = sum(s.skipped_blacklist + s.skipped_location + s.skipped_price for s in stats)
+    total_skipped_bl = sum(s.skipped_blacklist for s in stats)
+    total_skipped_loc = sum(s.skipped_location for s in stats)
+    total_skipped_price = sum(s.skipped_price for s in stats)
+    total_skipped_unrel = sum(s.skipped_unreliable for s in stats)
     total_errors = sum(s.errors for s in stats)
     no_market = [s.name for s in stats if s.market_value is None]
-    weak_market = [s.name for s in stats if s.market_value is not None and s.sample_size < 5]
-    print()
-    print("-" * 70)
-    print(f"[SUMMARY] {len(stats)} watchlists em {elapsed:.1f}s | "
-          f"alertas={total_alerts} | descidas={total_drops} | scored={total_scored} | "
-          f"skipped={total_skipped} | erros={total_errors} | seen.json={seen_count}")
+    weak_market = [s.name for s in stats
+                   if s.market_value is not None and s.filtered_sample_size < 5]
+    log.info("=" * 70)
+    log.info(
+        "[SUMMARY] watchlists=%d in %.1fs | alerts=%d drops=%d scored=%d "
+        "skip(bl=%d loc=%d price=%d unreliable=%d) errors=%d seen=%d",
+        len(stats), elapsed, total_alerts, total_drops, total_scored,
+        total_skipped_bl, total_skipped_loc, total_skipped_price, total_skipped_unrel,
+        total_errors, seen_count,
+    )
     if no_market:
-        print(f"  Sem dados de mercado: {', '.join(no_market[:6])}{' …' if len(no_market) > 6 else ''}")
+        log.warning("[SUMMARY] no market data: %s%s",
+                    ", ".join(no_market[:6]),
+                    " …" if len(no_market) > 6 else "")
     if weak_market:
-        print(f"  Amostra fraca (<5): {', '.join(weak_market[:6])}{' …' if len(weak_market) > 6 else ''}")
-    print("-" * 70)
+        log.warning("[SUMMARY] weak filtered sample (<5): %s%s",
+                    ", ".join(weak_market[:6]),
+                    " …" if len(weak_market) > 6 else "")
+    log.info("=" * 70)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# /api/evaluate helper — match an extension-supplied listing to the most
+# relevant watchlist's cached market data, then score it.
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _watch_match_score(title_norm: str, watch: Dict) -> int:
+    """Heuristic: how well does this title match a watchlist?
+
+    Score 100 if all keywords are word-bounded matches in the title; otherwise
+    a partial overlap count. 0 means no match.
+    """
+    keywords = [normalize(k) for k in watch.get("keywords", [])]
+    if not keywords:
+        return 0
+    full = title_matches(title_norm, watch["keywords"])
+    if full:
+        return 100 + sum(len(k) for k in keywords)  # ties broken by total length
+    hits = sum(1 for k in keywords if _word_boundary_search(k, title_norm))
+    return hits * 5
+
+
+def find_best_watch_for_title(title: str, config: Dict) -> Optional[Dict]:
+    """Return the watchlist that best matches `title`, or None if no overlap."""
+    norm = normalize(title)
+    best, best_score = None, 0
+    for w in config.get("watchlists", []):
+        score = _watch_match_score(norm, w)
+        if score > best_score:
+            best, best_score = w, score
+    return best if best_score > 0 else None
+
+
+def evaluate_listing_via_api(
+    payload: Dict,
+    config: Dict,
+    market_cache: Optional[Dict] = None,
+    *,
+    allow_live_fetch: bool = False,
+    scraper: Optional[MarketplaceScraper] = None,
+) -> Dict:
+    """
+    Server-side helper for the /api/evaluate endpoint.
+
+    Picks the best-matching watchlist, looks up its cached market data, and
+    runs `pricing.evaluate_listing`. Falls back to a live scrape only if
+    `allow_live_fetch=True` and a scraper is supplied — by default we want
+    the API to be cheap and never hammer OLX from request handlers.
+    """
+    market_cache = market_cache if market_cache is not None else load_market_cache()
+    title = (payload.get("title") or "").strip()
+    if not title:
+        return {
+            "verdict": "unreliable",
+            "listing_price": payload.get("price"),
+            "estimated_market_price": None,
+            "profit_margin_percent": None,
+            "sample_size": 0,
+            "filtered_sample_size": 0,
+            "reliability_score": 0.0,
+            "match_type": "global",
+            "reasons": ["title em falta"],
+            "condition": "unknown",
+        }
+
+    watch = find_best_watch_for_title(title, config)
+    if watch is None:
+        return {
+            "verdict": "unreliable",
+            "listing_price": payload.get("price"),
+            "estimated_market_price": None,
+            "profit_margin_percent": None,
+            "sample_size": 0,
+            "filtered_sample_size": 0,
+            "reliability_score": 0.0,
+            "match_type": "global",
+            "reasons": ["Não foi possível associar a um watchlist conhecido"],
+            "condition": pricing.detect_condition(title),
+        }
+
+    cache_key = market_cache_key(watch)
+    ttl = config.get("settings", {}).get("market_cache_ttl_minutes", 60)
+    market = get_cached_market(market_cache, cache_key, ttl)
+
+    if market is None and allow_live_fetch and scraper is not None:
+        log.info("[API-EVAL] cache miss for %s — performing live fetch", watch["name"])
+        market = estimate_market_value(
+            scraper,
+            watch.get("reference_urls", []),
+            watch.get("search_urls", []),
+            watch["keywords"],
+            combined_blacklist(config, watch),
+            config=config,
+        )
+        market_cache[cache_key] = {
+            "market": market,
+            "computed_at": _now_iso(),
+            "watch_name": watch["name"],
+        }
+        save_market_cache(market_cache)
+
+    if market is None:
+        return {
+            "verdict": "unreliable",
+            "listing_price": payload.get("price"),
+            "estimated_market_price": None,
+            "profit_margin_percent": None,
+            "sample_size": 0,
+            "filtered_sample_size": 0,
+            "reliability_score": 0.0,
+            "match_type": "global",
+            "reasons": [
+                f"Sem dados de mercado em cache para '{watch['name']}'. "
+                "Aguarde o próximo ciclo do scraper.",
+            ],
+            "condition": pricing.detect_condition(title),
+            "watch_name": watch["name"],
+        }
+
+    # Mock a Listing-shaped object so get_market_for_listing can pick the best slice
+    fake = Listing(
+        title=title,
+        price=payload.get("price"),
+        url=payload.get("url", ""),
+        source="extension",
+        location=payload.get("location") or "",
+        raw_text=title,
+    )
+    market_stats = get_market_for_listing(market, fake)
+
+    result = pricing.evaluate_listing(
+        listing={
+            "title": title,
+            "price": payload.get("price"),
+            "url": payload.get("url"),
+            "condition": payload.get("condition") or "unknown",
+            "category": payload.get("category"),
+            "location": payload.get("location"),
+        },
+        market=market_stats,
+        settings=config.get("settings", {}),
+    )
+    result["watch_name"] = watch["name"]
+    return result
 
 
 def main() -> None:

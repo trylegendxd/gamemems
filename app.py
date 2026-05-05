@@ -349,6 +349,104 @@ def create_app() -> Flask:
         triggered = runner.trigger_now()
         return jsonify({"triggered": triggered, "status": runner.get_status()})
 
+    # ── /api/evaluate (browser extension) ────────────────────────────────────
+    EXT_TOKEN = os.getenv("EXTENSION_API_TOKEN", "").strip()
+    EXT_ORIGIN = os.getenv("EXTENSION_ALLOWED_ORIGIN", "").strip()
+    EXT_LIVE_FETCH = os.getenv("EXTENSION_LIVE_FETCH", "false").lower() in ("1", "true", "yes")
+
+    def _extract_bearer_token() -> Optional[str]:
+        """Token may arrive as `Authorization: Bearer X` or `X-API-Token: X`."""
+        auth = request.headers.get("Authorization", "")
+        if auth.lower().startswith("bearer "):
+            return auth[7:].strip()
+        return request.headers.get("X-API-Token", "").strip() or None
+
+    def _apply_cors(resp):
+        """Attach CORS headers when EXTENSION_ALLOWED_ORIGIN is configured.
+
+        We only echo back an origin we trust; we never use a wildcard so the
+        token isn't readable cross-site by accident.
+        """
+        if not EXT_ORIGIN:
+            return resp
+        origin = request.headers.get("Origin", "")
+        allowed = [o.strip() for o in EXT_ORIGIN.split(",") if o.strip()]
+        if origin and (origin in allowed or "*" in allowed):
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers["Vary"] = "Origin"
+            resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = "Authorization, X-API-Token, Content-Type"
+            resp.headers["Access-Control-Max-Age"] = "600"
+        return resp
+
+    @app.route("/api/evaluate", methods=["POST", "OPTIONS"])
+    def api_evaluate():
+        # CORS preflight
+        if request.method == "OPTIONS":
+            return _apply_cors(make_response("", 204))
+
+        if not EXT_TOKEN:
+            log.warning("/api/evaluate called but EXTENSION_API_TOKEN is not set")
+            return _apply_cors(jsonify({"error": "extension_disabled"})), 503
+
+        provided = _extract_bearer_token()
+        # secrets.compare_digest avoids timing leaks on the token value
+        if not provided or not secrets.compare_digest(provided, EXT_TOKEN):
+            return _apply_cors(jsonify({"error": "unauthorized"})), 401
+
+        body = request.get_json(silent=True) or {}
+        title = (body.get("title") or "").strip()
+        url = (body.get("url") or "").strip()
+        price_raw = body.get("price")
+        if not title or not url:
+            return _apply_cors(jsonify({"error": "title and url are required"})), 400
+        try:
+            price = float(price_raw) if price_raw is not None else None
+        except (TypeError, ValueError):
+            return _apply_cors(jsonify({"error": "price must be a number"})), 400
+
+        # Lazy-load config + market_cache. Reload config.yml on each request so
+        # operators can edit it without restarting.
+        try:
+            with open(os.getenv("CONFIG_PATH", "config.yml"), "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f)
+        except Exception as e:
+            log.exception("/api/evaluate failed to load config: %s", e)
+            return _apply_cors(jsonify({"error": "config_unavailable"})), 500
+
+        try:
+            market_cache = bot_module.load_market_cache()
+        except Exception as e:
+            log.warning("/api/evaluate: market cache load failed: %s", e)
+            market_cache = {}
+
+        scraper = None
+        if EXT_LIVE_FETCH:
+            scraper = bot_module.MarketplaceScraper.from_config(cfg)
+
+        # Log without leaking the token
+        log.info(
+            "[API-EVAL] title=%r price=%s url=%s origin=%s live_fetch=%s",
+            title[:80], price, url[:80], request.headers.get("Origin", "-"),
+            EXT_LIVE_FETCH,
+        )
+
+        result = bot_module.evaluate_listing_via_api(
+            payload={
+                "title": title,
+                "price": price,
+                "url": url,
+                "condition": body.get("condition", "unknown"),
+                "category": body.get("category"),
+                "location": body.get("location"),
+            },
+            config=cfg,
+            market_cache=market_cache,
+            allow_live_fetch=EXT_LIVE_FETCH,
+            scraper=scraper,
+        )
+        return _apply_cors(jsonify(result))
+
     # ── CSV export ───────────────────────────────────────────────────────────
     @app.route("/api/deals.csv")
     @require_auth

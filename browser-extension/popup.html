@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8" />
+    <title>OLX Flip Evaluator</title>
+    <style>
+      body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; min-width: 320px; padding: 14px; font-size: 13px; }
+      h1 { font-size: 14px; margin: 0 0 10px; }
+      label { display: block; margin-top: 8px; font-weight: 600; }
+      input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+      button { margin-top: 12px; padding: 6px 10px; border-radius: 6px; border: 0; background: #2563eb; color: white; cursor: pointer; }
+      .ok { color: #047857; margin-top: 8px; }
+      .err { color: #b91c1c; margin-top: 8px; }
+      small { color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <h1>OLX Flip Evaluator</h1>
+    <small>Necessário configurar antes do primeiro uso. Os valores ficam no chrome.storage.sync — não publicar nem partilhar.</small>
+
+    <label for="backendUrl">Backend URL</label>
+    <input id="backendUrl" placeholder="https://your-app.onrender.com" />
+
+    <label for="apiToken">API Token (EXTENSION_API_TOKEN)</label>
+    <input id="apiToken" type="password" placeholder="cola o token aqui" />
+
+    <button id="save">Guardar</button>
+    <div id="status"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
