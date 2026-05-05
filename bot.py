@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Dict, Optional, Iterable, Tuple
-from urllib.parse import quote_plus, urljoin, urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 import yaml
@@ -1640,35 +1640,6 @@ def find_best_watch_for_title(title: str, config: Dict) -> Optional[Dict]:
     return best if best_score > 0 else None
 
 
-def _extension_search_urls(title: str, config: Dict) -> List[str]:
-    """
-    Build cross-marketplace search URLs for a raw listing title.
-
-    Uses conservative defaults (OLX + CustoJusto) and allows overrides through
-    `settings.extension_marketplaces`.
-    """
-    q = quote_plus(clean_text(title)[:120])
-    if not q:
-        return []
-    defaults = [
-        "https://www.olx.pt/ads/q-{query}/",
-        "https://www.custojusto.pt/portugal?q={query}",
-    ]
-    templates = (
-        config.get("settings", {}).get("extension_marketplaces")
-        or defaults
-    )
-    out: List[str] = []
-    for t in templates:
-        if not isinstance(t, str):
-            continue
-        try:
-            out.append(t.format(query=q))
-        except Exception:
-            continue
-    return out
-
-
 def evaluate_listing_via_api(
     payload: Dict,
     config: Dict,
@@ -1702,17 +1673,25 @@ def evaluate_listing_via_api(
         }
 
     watch = find_best_watch_for_title(title, config)
+    if watch is None:
+        return {
+            "verdict": "unreliable",
+            "listing_price": payload.get("price"),
+            "estimated_market_price": None,
+            "profit_margin_percent": None,
+            "sample_size": 0,
+            "filtered_sample_size": 0,
+            "reliability_score": 0.0,
+            "match_type": "global",
+            "reasons": ["Não foi possível associar a um watchlist conhecido"],
+            "condition": pricing.detect_condition(title),
+        }
 
-    market = None
-    watch_name: Optional[str] = None
+    cache_key = market_cache_key(watch)
+    ttl = config.get("settings", {}).get("market_cache_ttl_minutes", 60)
+    market = get_cached_market(market_cache, cache_key, ttl)
 
-    if watch is not None:
-        cache_key = market_cache_key(watch)
-        ttl = config.get("settings", {}).get("market_cache_ttl_minutes", 60)
-        market = get_cached_market(market_cache, cache_key, ttl)
-        watch_name = watch["name"]
-
-    if market is None and allow_live_fetch and scraper is not None and watch is not None:
+    if market is None and allow_live_fetch and scraper is not None:
         log.info("[API-EVAL] cache miss for %s — performing live fetch", watch["name"])
         market = estimate_market_value(
             scraper,
@@ -1729,25 +1708,6 @@ def evaluate_listing_via_api(
         }
         save_market_cache(market_cache)
 
-    if market is None and allow_live_fetch and scraper is not None:
-        urls = _extension_search_urls(title, config)
-        if urls:
-            ext_watch = {
-                "name": "extension_global_live",
-                "keywords": [title],
-                "blacklist": config.get("global_blacklist", []),
-            }
-            log.info("[API-EVAL] no watch/cache — global fetch for title=%r", title[:80])
-            market = estimate_market_value(
-                scraper,
-                reference_urls=[],
-                search_urls=urls,
-                keywords=ext_watch["keywords"],
-                blacklist=ext_watch["blacklist"],
-                config=config,
-            )
-            watch_name = "Global (OLX+CustoJusto)"
-
     if market is None:
         return {
             "verdict": "unreliable",
@@ -1759,13 +1719,11 @@ def evaluate_listing_via_api(
             "reliability_score": 0.0,
             "match_type": "global",
             "reasons": [
-                (
-                    f"Sem dados de mercado em cache para '{watch['name']}'. "
-                    "Aguarde o próximo ciclo do scraper."
-                ) if watch else "Sem dados de mercado para este produto específico.",
+                f"Sem dados de mercado em cache para '{watch['name']}'. "
+                "Aguarde o próximo ciclo do scraper.",
             ],
             "condition": pricing.detect_condition(title),
-            "watch_name": watch_name,
+            "watch_name": watch["name"],
         }
 
     # Mock a Listing-shaped object so get_market_for_listing can pick the best slice
@@ -1791,7 +1749,7 @@ def evaluate_listing_via_api(
         market=market_stats,
         settings=config.get("settings", {}),
     )
-    result["watch_name"] = watch_name
+    result["watch_name"] = watch["name"]
     return result
 
 
