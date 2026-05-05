@@ -212,11 +212,29 @@ def create_app() -> Flask:
         except ValueError:
             return None
 
+    def _int_arg(name: str, default: int, *, min_value: int = 0, max_value: Optional[int] = None):
+        v = request.args.get(name)
+        if v in (None, ""):
+            return default
+        try:
+            n = int(v)
+        except ValueError:
+            return None
+        if n < min_value:
+            return None
+        if max_value is not None and n > max_value:
+            n = max_value
+        return n
+
     @app.route("/api/deals")
     @require_auth
     def api_list_deals():
-        limit = min(int(request.args.get("limit", 200)), 500)
-        offset = int(request.args.get("offset", 0))
+        limit = _int_arg("limit", 200, min_value=1, max_value=500)
+        offset = _int_arg("offset", 0, min_value=0)
+        if limit is None:
+            return jsonify({"error": "invalid limit; must be a non-negative integer"}), 400
+        if offset is None:
+            return jsonify({"error": "invalid offset; must be a non-negative integer"}), 400
         deals = db.list_deals(
             search=request.args.get("search") or None,
             category=request.args.get("category") or None,
