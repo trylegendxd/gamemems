@@ -352,7 +352,7 @@ def create_app() -> Flask:
     # ── /api/evaluate (browser extension) ────────────────────────────────────
     EXT_TOKEN = os.getenv("EXTENSION_API_TOKEN", "").strip()
     EXT_ORIGIN = os.getenv("EXTENSION_ALLOWED_ORIGIN", "").strip()
-    EXT_LIVE_FETCH = os.getenv("EXTENSION_LIVE_FETCH", "false").lower() in ("1", "true", "yes")
+    EXT_LIVE_FETCH = os.getenv("EXTENSION_LIVE_FETCH", "true").lower() in ("1", "true", "yes")
 
     def _extract_bearer_token() -> Optional[str]:
         """Token may arrive as `Authorization: Bearer X` or `X-API-Token: X`."""
