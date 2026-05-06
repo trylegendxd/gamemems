@@ -57,11 +57,33 @@ def _resolve_db_url() -> str:
 
 
 _DB_URL = _resolve_db_url()
-_engine_kwargs: Dict[str, Any] = {"future": True, "pool_pre_ping": True}
+_engine_kwargs: Dict[str, Any] = {
+    "future": True,
+    # pool_pre_ping issues a `SELECT 1` before checkout to detect connections
+    # that died while idle (Render / pgbouncer kill them silently).
+    "pool_pre_ping": True,
+}
 if _DB_URL.startswith("sqlite"):
     # SQLite needs check_same_thread=False because the scraper thread and
     # Flask request threads share a single engine pool.
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    # Postgres tuning. Three things matter on Render:
+    #   1. pool_recycle — proactively close+reopen connections before the
+    #      provider kills them. Render's free tier idles connections out
+    #      around the 5-minute mark, so we recycle at 4.
+    #   2. connect_args timeout — keep the new-connection wait short so a
+    #      DNS hiccup doesn't stall the scraper thread for minutes.
+    #   3. sslmode=require — Render Postgres rejects plaintext anyway, but
+    #      stating it explicitly side-steps psycopg's negotiation in the
+    #      rare case the URL omits it.
+    _engine_kwargs["pool_recycle"] = int(os.getenv("DB_POOL_RECYCLE_SECONDS", "240"))
+    _engine_kwargs["pool_size"] = int(os.getenv("DB_POOL_SIZE", "5"))
+    _engine_kwargs["max_overflow"] = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    _engine_kwargs["connect_args"] = {
+        "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+        "sslmode": os.getenv("DB_SSLMODE", "require"),
+    }
 
 engine = create_engine(_DB_URL, **_engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
@@ -316,18 +338,50 @@ def mark_telegram_sent(url_hash: str) -> None:
 
 # ── Seen-listings (scraper dedup index) ──────────────────────────────────────
 
+def _retry_on_disconnect(fn, *, attempts: int = 2):
+    """Run `fn` and retry once when SQLAlchemy raises a disconnect-shaped
+    error. Render Postgres occasionally hands us a connection that died
+    mid-stream ("SSL error: packet length too long"); the second attempt
+    triggers `pool_pre_ping`, which evicts the dead connection and opens
+    a fresh one.
+    """
+    from sqlalchemy.exc import OperationalError, DBAPIError, InterfaceError
+
+    last: Exception
+    for i in range(attempts):
+        try:
+            return fn()
+        except (OperationalError, DBAPIError, InterfaceError) as e:
+            last = e
+            # `connection_invalidated` flags the cases worth retrying.
+            invalidated = bool(getattr(e, "connection_invalidated", False))
+            msg = str(e).lower()
+            transient = invalidated or "ssl" in msg or "consuming input" in msg \
+                        or "server closed the connection" in msg
+            if i == attempts - 1 or not transient:
+                raise
+            # Force the pool to drop bad connections before retry.
+            try:
+                engine.dispose(close=False)
+            except Exception:
+                pass
+    raise last  # unreachable, satisfies type checkers
+
+
 def load_seen_dict() -> Dict[str, Dict[str, Any]]:
     """Load all seen rows into the dict shape bot.py expects."""
-    out: Dict[str, Dict[str, Any]] = {}
-    with session_scope() as s:
-        for row in s.execute(select(SeenListing)).scalars():
-            out[row.url] = {
-                "first": row.first_seen_at.strftime("%Y-%m-%dT%H:%M:%SZ") if row.first_seen_at else None,
-                "price": row.price,
-                "alerted_price": row.alerted_price,
-                "alerted_at": row.alerted_at.strftime("%Y-%m-%dT%H:%M:%SZ") if row.alerted_at else None,
-            }
-    return out
+    def _do() -> Dict[str, Dict[str, Any]]:
+        out: Dict[str, Dict[str, Any]] = {}
+        with session_scope() as s:
+            for row in s.execute(select(SeenListing)).scalars():
+                out[row.url] = {
+                    "first": row.first_seen_at.strftime("%Y-%m-%dT%H:%M:%SZ") if row.first_seen_at else None,
+                    "price": row.price,
+                    "alerted_price": row.alerted_price,
+                    "alerted_at": row.alerted_at.strftime("%Y-%m-%dT%H:%M:%SZ") if row.alerted_at else None,
+                }
+        return out
+    return _retry_on_disconnect(_do)
 
 
 def save_seen_dict(seen: Dict[str, Dict[str, Any]], max_age_days: int = 60) -> None:
@@ -337,6 +391,13 @@ def save_seen_dict(seen: Dict[str, Dict[str, Any]], max_age_days: int = 60) -> N
     cutoff = _utcnow().timestamp() - max_age_days * 86400
     now = _utcnow()
 
+    def _do():
+        _save_seen_dict_body(seen, cutoff, now)
+
+    _retry_on_disconnect(_do)
+
+
+def _save_seen_dict_body(seen: Dict[str, Dict[str, Any]], cutoff: float, now: datetime) -> None:
     with session_scope() as s:
         # Pull existing keys in one query to decide insert vs update.
         existing_hashes = {
