@@ -305,15 +305,45 @@ def _extract_console_model(t: str) -> Optional[str]:
             return result(m) if callable(result) else result
     return None
 
+def _extract_handheld_model(t: str) -> Optional[str]:
+    """Identify handheld gaming consoles explicitly to avoid cross-model bleed."""
+    if re.search(r"\bsteam\s*deck\b", t):
+        if re.search(r"\boled\b", t):
+            return "steam deck oled"
+        if re.search(r"\blcd\b", t):
+            return "steam deck lcd"
+        return "steam deck"
+    m = re.search(r"\brog\s*ally\b(?:\s*(x))?", t)
+    if m:
+        return "rog ally x" if m.group(1) else "rog ally"
+    return None
+
+
+def _extract_monitor_model(t: str) -> Optional[str]:
+    """Coarse monitor buckets so 4K/240Hz/Ultrawide watches stay separated."""
+    if "monitor" not in t:
+        return None
+    if re.search(r"\bultrawide\b|\b21:9\b|\b32:9\b", t):
+        return "monitor ultrawide"
+    hz = re.search(r"\b(144|165|240)\s*hz\b", t)
+    if hz:
+        return f"monitor {hz.group(1)}hz"
+    if re.search(r"\b4k\b|\buhd\b|\b3840\s*[x×]\s*2160\b", t):
+        return "monitor 4k"
+    return "monitor"
+
+
 
 # Registry: maps a trigger keyword → extractor function
 _FINGERPRINT_EXTRACTORS = [
-    ("ipad",     re.compile(r"\bipad\b"),                    _extract_ipad_model),
-    ("iphone",   re.compile(r"\biphone\b"),                  _extract_iphone_model),
-    ("samsung",  re.compile(r"\bsamsung\b|\bgalaxy\b"),       _extract_samsung_model),
-    ("macbook",  re.compile(r"\bmacbook\b"),                  _extract_macbook_model),
-    ("gpu",      re.compile(r"\b(rtx|gtx|rx)\s*\d{3,4}\b"),  _extract_gpu_model),
-    ("console",  re.compile(r"\b(ps[45]|xbox|nintendo|switch)\b"), _extract_console_model),
+    ("ipad",      re.compile(r"\bipad\b"),                              _extract_ipad_model),
+    ("iphone",    re.compile(r"\biphone\b"),                            _extract_iphone_model),
+    ("samsung",   re.compile(r"\bsamsung\b|\bgalaxy\b"),             _extract_samsung_model),
+    ("macbook",   re.compile(r"\bmacbook\b"),                            _extract_macbook_model),
+    ("gpu",       re.compile(r"\b(rtx|gtx|rx)\s*\d{3,4}\b"),        _extract_gpu_model),
+    ("handheld",  re.compile(r"\b(steam\s*deck|rog\s*ally)\b"),      _extract_handheld_model),
+    ("monitor",   re.compile(r"\bmonitor\b"),                            _extract_monitor_model),
+    ("console",   re.compile(r"\b(ps[45]|xbox|nintendo|switch)\b"),       _extract_console_model),
 ]
 
 
