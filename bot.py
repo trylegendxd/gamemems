@@ -1297,8 +1297,11 @@ def estimate_market_value(
         if not title_matches(item.title, keywords):
             dropped["keyword"] += 1
             continue
+        # Blacklist is intentionally title-scoped to avoid false positives
+        # from long descriptions (e.g. "troco por iphone 11 pro") that are
+        # not the actual item being sold.
         combined_text = " ".join([item.title, item.raw_text])
-        if find_blacklist(combined_text, blacklist):
+        if find_blacklist(item.title, blacklist):
             dropped["blacklist"] += 1
             continue
         if apply_damage_filter and pricing.find_damage_keyword(combined_text):
@@ -1765,7 +1768,9 @@ def process_watch(
             ])
 
             # 1) User-supplied blacklist (per-watch + global)
-            bad_word = find_blacklist(text_for_filter, blacklist)
+            # Title-scoped blacklist to reduce false positives from trade text
+            # in description/location fields.
+            bad_word = find_blacklist(listing.title, blacklist)
             # 2) Built-in damage/risk vocabulary (configurable: bypass when the
             #    watchlist explicitly opts in via `allow_damaged: true`).
             damage_word = None
@@ -1858,7 +1863,7 @@ def process_watch(
                 if on_deal_callback is not None:
                     try:
                         risk_words = []
-                        bw = find_blacklist(text_for_filter, blacklist)
+                        bw = find_blacklist(listing.title, blacklist)
                         if bw:
                             risk_words.append(bw)
                         # Compose a multi-line reason from the structured list

@@ -95,6 +95,14 @@ class TestTitleMatchesVariantFix(unittest.TestCase):
         self.assertTrue(bot.title_matches("RTX 3060 8GB MSI", ["rtx 3060"]))
 
 
+class TestBlacklistPrecision(unittest.TestCase):
+    def test_blacklist_should_not_match_only_in_description(self):
+        title = "iPhone 11 128GB desbloqueado"
+        description = "Aceito troca por iPhone 11 Pro em bom estado"
+        self.assertIsNone(bot.find_blacklist(title, ["iphone 11 pro"]))
+        self.assertIsNotNone(bot.find_blacklist(f"{title} {description}", ["iphone 11 pro"]))
+
+
 class TestHierarchicalMarketLookup(unittest.TestCase):
     def setUp(self):
         # Build a market dict where the storage-specific bucket is thin

@@ -49,6 +49,12 @@ class TestMarketStats(unittest.TestCase):
         self.assertEqual(stats["sample_size"], 0)
         self.assertEqual(stats["filtered_sample_size"], 0)
 
+    def test_low_tail_guard_drops_implausible_floor(self):
+        prices = [20, 30, 40, 110, 115, 120, 125, 130, 135, 140]
+        stats = pricing.build_market_stats(prices, {"outlier_method": "iqr"})
+        self.assertGreaterEqual(stats["min"], 40)
+        self.assertEqual(stats["sample_size"], 10)
+
 
 class TestDamageDetection(unittest.TestCase):
     def test_pt_damage_phrases(self):
