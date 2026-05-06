@@ -1472,3 +1472,760 @@ watchlists:
       - "https://www.custojusto.pt/portugal/q/ssd%20nvme%202tb"
     blacklist: ["erro", "sem testar", "setores defeituosos", "bad sectors"]
     max_buy_price: 110
+
+  # ── Expansion pack v3.2 (50+ new resale targets) ────────────────────────────
+
+  # GPUs — RTX 50-series (early prices noisy, max set conservatively)
+  - name: "RTX 5070"
+    keywords: ["rtx 5070"]
+    search_urls:
+      - "https://www.olx.pt/q-rtx-5070/"
+    reference_urls:
+      - "https://www.olx.pt/q-rtx-5070/"
+      - "https://www.custojusto.pt/portugal/q/rtx%205070"
+    blacklist: ["5070 ti"]
+    max_buy_price: 580
+
+  - name: "RTX 5080"
+    keywords: ["rtx 5080"]
+    search_urls:
+      - "https://www.olx.pt/q-rtx-5080/"
+    reference_urls:
+      - "https://www.olx.pt/q-rtx-5080/"
+      - "https://www.custojusto.pt/portugal/q/rtx%205080"
+    blacklist: []
+    max_buy_price: 950
+
+  - name: "RTX 5090"
+    keywords: ["rtx 5090"]
+    search_urls:
+      - "https://www.olx.pt/q-rtx-5090/"
+    reference_urls:
+      - "https://www.olx.pt/q-rtx-5090/"
+      - "https://www.custojusto.pt/portugal/q/rtx%205090"
+    blacklist: []
+    max_buy_price: 1700
+
+  - name: "RX 7700 XT"
+    keywords: ["rx 7700 xt"]
+    search_urls:
+      - "https://www.olx.pt/q-rx-7700-xt/"
+    reference_urls:
+      - "https://www.olx.pt/q-rx-7700-xt/"
+      - "https://www.custojusto.pt/portugal/q/rx%207700%20xt"
+    blacklist: []
+    max_buy_price: 320
+
+  - name: "RX 7800 XT"
+    keywords: ["rx 7800 xt"]
+    search_urls:
+      - "https://www.olx.pt/q-rx-7800-xt/"
+    reference_urls:
+      - "https://www.olx.pt/q-rx-7800-xt/"
+      - "https://www.custojusto.pt/portugal/q/rx%207800%20xt"
+    blacklist: []
+    max_buy_price: 420
+
+  - name: "RX 7900 XT"
+    keywords: ["rx 7900 xt"]
+    search_urls:
+      - "https://www.olx.pt/q-rx-7900-xt/"
+    reference_urls:
+      - "https://www.olx.pt/q-rx-7900-xt/"
+      - "https://www.custojusto.pt/portugal/q/rx%207900%20xt"
+    blacklist: ["xtx"]
+    max_buy_price: 600
+
+  - name: "RX 7900 XTX"
+    keywords: ["rx 7900 xtx"]
+    search_urls:
+      - "https://www.olx.pt/q-rx-7900-xtx/"
+    reference_urls:
+      - "https://www.olx.pt/q-rx-7900-xtx/"
+      - "https://www.custojusto.pt/portugal/q/rx%207900%20xtx"
+    blacklist: []
+    max_buy_price: 800
+
+  # CPUs — Ryzen 7000 / 9000 + Intel 13/14
+  - name: "Ryzen 5 7600X"
+    keywords: ["ryzen 5 7600x"]
+    search_urls:
+      - "https://www.olx.pt/q-ryzen-5-7600x/"
+    reference_urls:
+      - "https://www.olx.pt/q-ryzen-5-7600x/"
+      - "https://www.custojusto.pt/portugal/q/ryzen%205%207600x"
+    blacklist: []
+    max_buy_price: 180
+
+  - name: "Ryzen 7 7700X"
+    keywords: ["ryzen 7 7700x"]
+    search_urls:
+      - "https://www.olx.pt/q-ryzen-7-7700x/"
+    reference_urls:
+      - "https://www.olx.pt/q-ryzen-7-7700x/"
+      - "https://www.custojusto.pt/portugal/q/ryzen%207%207700x"
+    blacklist: ["7800x3d"]
+    max_buy_price: 260
+
+  - name: "Ryzen 7 7800X3D"
+    keywords: ["7800x3d"]
+    search_urls:
+      - "https://www.olx.pt/q-7800x3d/"
+    reference_urls:
+      - "https://www.olx.pt/q-7800x3d/"
+      - "https://www.custojusto.pt/portugal/q/7800x3d"
+    blacklist: []
+    max_buy_price: 360
+
+  - name: "Ryzen 9 7900X"
+    keywords: ["ryzen 9 7900x"]
+    search_urls:
+      - "https://www.olx.pt/q-ryzen-9-7900x/"
+    reference_urls:
+      - "https://www.olx.pt/q-ryzen-9-7900x/"
+      - "https://www.custojusto.pt/portugal/q/ryzen%209%207900x"
+    blacklist: ["7950x"]
+    max_buy_price: 320
+
+  - name: "Ryzen 9 7950X"
+    keywords: ["ryzen 9 7950x"]
+    search_urls:
+      - "https://www.olx.pt/q-ryzen-9-7950x/"
+    reference_urls:
+      - "https://www.olx.pt/q-ryzen-9-7950x/"
+      - "https://www.custojusto.pt/portugal/q/ryzen%209%207950x"
+    blacklist: ["x3d"]
+    max_buy_price: 480
+
+  - name: "Intel i7 13700K"
+    keywords: ["i7 13700k"]
+    search_urls:
+      - "https://www.olx.pt/q-i7-13700k/"
+    reference_urls:
+      - "https://www.olx.pt/q-i7-13700k/"
+      - "https://www.custojusto.pt/portugal/q/i7%2013700k"
+    blacklist: []
+    max_buy_price: 290
+
+  - name: "Intel i9 13900K"
+    keywords: ["i9 13900k"]
+    search_urls:
+      - "https://www.olx.pt/q-i9-13900k/"
+    reference_urls:
+      - "https://www.olx.pt/q-i9-13900k/"
+      - "https://www.custojusto.pt/portugal/q/i9%2013900k"
+    blacklist: []
+    max_buy_price: 450
+
+  - name: "Intel i7 14700K"
+    keywords: ["i7 14700k"]
+    search_urls:
+      - "https://www.olx.pt/q-i7-14700k/"
+    reference_urls:
+      - "https://www.olx.pt/q-i7-14700k/"
+      - "https://www.custojusto.pt/portugal/q/i7%2014700k"
+    blacklist: []
+    max_buy_price: 350
+
+  # Motherboards
+  - name: "Motherboard B550"
+    keywords: ["b550"]
+    search_urls:
+      - "https://www.olx.pt/q-motherboard-b550/"
+    reference_urls:
+      - "https://www.olx.pt/q-motherboard-b550/"
+      - "https://www.custojusto.pt/portugal/q/b550"
+    blacklist: ["b450"]
+    max_buy_price: 90
+
+  - name: "Motherboard B650"
+    keywords: ["b650"]
+    search_urls:
+      - "https://www.olx.pt/q-motherboard-b650/"
+    reference_urls:
+      - "https://www.olx.pt/q-motherboard-b650/"
+      - "https://www.custojusto.pt/portugal/q/b650"
+    blacklist: []
+    max_buy_price: 150
+
+  - name: "Motherboard X670"
+    keywords: ["x670"]
+    search_urls:
+      - "https://www.olx.pt/q-motherboard-x670/"
+    reference_urls:
+      - "https://www.olx.pt/q-motherboard-x670/"
+      - "https://www.custojusto.pt/portugal/q/x670"
+    blacklist: []
+    max_buy_price: 220
+
+  - name: "Motherboard Z790"
+    keywords: ["z790"]
+    search_urls:
+      - "https://www.olx.pt/q-motherboard-z790/"
+    reference_urls:
+      - "https://www.olx.pt/q-motherboard-z790/"
+      - "https://www.custojusto.pt/portugal/q/z790"
+    blacklist: []
+    max_buy_price: 200
+
+  # Smartphones — recent
+  - name: "iPhone 13 Pro"
+    keywords: ["iphone 13 pro"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-13-pro/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-13-pro/"
+      - "https://www.custojusto.pt/portugal/q/iphone%2013%20pro"
+    blacklist: ["max"]
+    max_buy_price: 420
+
+  - name: "iPhone 14 Pro"
+    keywords: ["iphone 14 pro"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-14-pro/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-14-pro/"
+      - "https://www.custojusto.pt/portugal/q/iphone%2014%20pro"
+    blacklist: []
+    max_buy_price: 580
+
+  - name: "iPhone 15 Pro"
+    keywords: ["iphone 15 pro"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-15-pro/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-15-pro/"
+      - "https://www.custojusto.pt/portugal/q/iphone%2015%20pro"
+    blacklist: []
+    max_buy_price: 750
+
+  - name: "iPhone 15 Pro Max"
+    keywords: ["iphone 15 pro max"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-15-pro-max/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-15-pro-max/"
+      - "https://www.custojusto.pt/portugal/q/iphone%2015%20pro%20max"
+    blacklist: []
+    max_buy_price: 950
+
+  - name: "iPhone 16 Plus"
+    keywords: ["iphone 16 plus"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-16-plus/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-iphone-16-plus/"
+      - "https://www.custojusto.pt/portugal/q/iphone%2016%20plus"
+    blacklist: []
+    max_buy_price: 850
+
+  - name: "Samsung Galaxy S23 Ultra"
+    keywords: ["s23 ultra"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-s23-ultra/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-s23-ultra/"
+      - "https://www.custojusto.pt/portugal/q/galaxy%20s23%20ultra"
+    blacklist: []
+    max_buy_price: 600
+
+  - name: "Samsung Galaxy S25"
+    keywords: ["galaxy s25"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-galaxy-s25/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-galaxy-s25/"
+      - "https://www.custojusto.pt/portugal/q/galaxy%20s25"
+    blacklist: ["ultra"]
+    max_buy_price: 600
+
+  - name: "Google Pixel 9"
+    keywords: ["google pixel 9"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-google-pixel-9/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-google-pixel-9/"
+      - "https://www.custojusto.pt/portugal/q/google%20pixel%209"
+    blacklist: ["pro"]
+    max_buy_price: 550
+
+  - name: "Xiaomi 14"
+    keywords: ["xiaomi 14"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-xiaomi-14/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-xiaomi-14/"
+      - "https://www.custojusto.pt/portugal/q/xiaomi%2014"
+    blacklist: []
+    max_buy_price: 450
+
+  - name: "Xiaomi Redmi Note 13"
+    keywords: ["redmi note 13"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-redmi-note-13/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-redmi-note-13/"
+      - "https://www.custojusto.pt/portugal/q/redmi%20note%2013"
+    blacklist: []
+    max_buy_price: 180
+
+  - name: "Nothing Phone 2"
+    keywords: ["nothing phone 2"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-nothing-phone-2/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/telemoveis/q-nothing-phone-2/"
+      - "https://www.custojusto.pt/portugal/q/nothing%20phone%202"
+    blacklist: []
+    max_buy_price: 350
+
+  # Apple — Macs / iPads / Watches / Audio extra
+  - name: "MacBook Air M4"
+    keywords: ["macbook air", "m4"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-macbook-air-m4/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-macbook-air-m4/"
+      - "https://www.custojusto.pt/portugal/q/macbook%20air%20m4"
+    blacklist: ["m1", "m2", "m3"]
+    max_buy_price: 1050
+
+  - name: "MacBook Pro M4"
+    keywords: ["macbook pro", "m4"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-macbook-pro-m4/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/computadores-informatica/portateis/q-macbook-pro-m4/"
+      - "https://www.custojusto.pt/portugal/q/macbook%20pro%20m4"
+    blacklist: ["m1", "m2", "m3"]
+    max_buy_price: 1500
+
+  - name: "Mac Studio"
+    keywords: ["mac studio"]
+    search_urls:
+      - "https://www.olx.pt/q-mac-studio/"
+    reference_urls:
+      - "https://www.olx.pt/q-mac-studio/"
+      - "https://www.custojusto.pt/portugal/q/mac%20studio"
+    blacklist: []
+    max_buy_price: 1500
+
+  - name: "iMac M3"
+    keywords: ["imac", "m3"]
+    search_urls:
+      - "https://www.olx.pt/q-imac-m3/"
+    reference_urls:
+      - "https://www.olx.pt/q-imac-m3/"
+      - "https://www.custojusto.pt/portugal/q/imac%20m3"
+    blacklist: ["m1"]
+    max_buy_price: 1200
+
+  - name: "Apple Watch Series 10"
+    keywords: ["apple watch", "series 10"]
+    search_urls:
+      - "https://www.olx.pt/q-apple-watch-series-10/"
+    reference_urls:
+      - "https://www.olx.pt/q-apple-watch-series-10/"
+      - "https://www.custojusto.pt/portugal/q/apple%20watch%20series%2010"
+    blacklist: ["ultra"]
+    max_buy_price: 350
+
+  - name: "Apple Watch Ultra 2"
+    keywords: ["apple watch ultra 2"]
+    search_urls:
+      - "https://www.olx.pt/q-apple-watch-ultra-2/"
+    reference_urls:
+      - "https://www.olx.pt/q-apple-watch-ultra-2/"
+      - "https://www.custojusto.pt/portugal/q/apple%20watch%20ultra%202"
+    blacklist: []
+    max_buy_price: 600
+
+  # Tablets
+  - name: "iPad Pro M4"
+    keywords: ["ipad pro", "m4"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/tablets/q-ipad-pro-m4/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/tablets/q-ipad-pro-m4/"
+      - "https://www.custojusto.pt/portugal/q/ipad%20pro%20m4"
+    blacklist: ["m1", "m2"]
+    max_buy_price: 950
+
+  - name: "iPad Air M2"
+    keywords: ["ipad air", "m2"]
+    search_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/tablets/q-ipad-air-m2/"
+    reference_urls:
+      - "https://www.olx.pt/telemoveis-e-tablets/tablets/q-ipad-air-m2/"
+      - "https://www.custojusto.pt/portugal/q/ipad%20air%20m2"
+    blacklist: []
+    max_buy_price: 550
+
+  # Wearables / audio
+  - name: "AirPods 4"
+    keywords: ["airpods 4"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/q-airpods-4/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/q-airpods-4/"
+      - "https://www.custojusto.pt/portugal/q/airpods%204"
+    blacklist: ["replica", "pro"]
+    max_buy_price: 130
+
+  - name: "Beats Studio Pro"
+    keywords: ["beats studio pro"]
+    search_urls:
+      - "https://www.olx.pt/q-beats-studio-pro/"
+    reference_urls:
+      - "https://www.olx.pt/q-beats-studio-pro/"
+      - "https://www.custojusto.pt/portugal/q/beats%20studio%20pro"
+    blacklist: ["replica"]
+    max_buy_price: 220
+
+  - name: "Sony WF-1000XM4"
+    keywords: ["wf-1000xm4"]
+    search_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/q-sony-wf-1000xm4/"
+    reference_urls:
+      - "https://www.olx.pt/tecnologia-e-informatica/q-sony-wf-1000xm4/"
+      - "https://www.custojusto.pt/portugal/q/sony%20wf-1000xm4"
+    blacklist: ["replica"]
+    max_buy_price: 130
+
+  - name: "Bose QC Ultra"
+    keywords: ["bose", "ultra"]
+    search_urls:
+      - "https://www.olx.pt/q-bose-qc-ultra/"
+    reference_urls:
+      - "https://www.olx.pt/q-bose-qc-ultra/"
+      - "https://www.custojusto.pt/portugal/q/bose%20qc%20ultra"
+    blacklist: ["replica", "qc35", "qc45"]
+    max_buy_price: 280
+
+  # Consoles & handhelds
+  - name: "Steam Deck OLED 1TB"
+    keywords: ["steam deck", "oled", "1tb"]
+    search_urls:
+      - "https://www.olx.pt/q-steam-deck-oled-1tb/"
+    reference_urls:
+      - "https://www.olx.pt/q-steam-deck-oled-1tb/"
+      - "https://www.custojusto.pt/portugal/q/steam%20deck%20oled%201tb"
+    blacklist: []
+    max_buy_price: 530
+
+  - name: "Lenovo Legion Go"
+    keywords: ["legion go"]
+    search_urls:
+      - "https://www.olx.pt/q-legion-go/"
+    reference_urls:
+      - "https://www.olx.pt/q-legion-go/"
+      - "https://www.custojusto.pt/portugal/q/legion%20go"
+    blacklist: []
+    max_buy_price: 500
+
+  - name: "ROG Ally X"
+    keywords: ["rog ally x"]
+    search_urls:
+      - "https://www.olx.pt/q-rog-ally-x/"
+    reference_urls:
+      - "https://www.olx.pt/q-rog-ally-x/"
+      - "https://www.custojusto.pt/portugal/q/rog%20ally%20x"
+    blacklist: []
+    max_buy_price: 650
+
+  - name: "Nintendo Switch Lite"
+    keywords: ["switch lite"]
+    search_urls:
+      - "https://www.olx.pt/q-nintendo-switch-lite/"
+    reference_urls:
+      - "https://www.olx.pt/q-nintendo-switch-lite/"
+      - "https://www.custojusto.pt/portugal/q/switch%20lite"
+    blacklist: ["oled"]
+    max_buy_price: 130
+
+  # Cameras / drones
+  - name: "Canon R6 Mark II"
+    keywords: ["r6 mark ii", "r6m2"]
+    search_urls:
+      - "https://www.olx.pt/q-canon-r6-mark-ii/"
+    reference_urls:
+      - "https://www.olx.pt/q-canon-r6-mark-ii/"
+      - "https://www.custojusto.pt/portugal/q/canon%20r6%20mark%20ii"
+    blacklist: []
+    max_buy_price: 1700
+
+  - name: "Sony A7 IV"
+    keywords: ["sony a7 iv", "a7 iv"]
+    search_urls:
+      - "https://www.olx.pt/q-sony-a7-iv/"
+    reference_urls:
+      - "https://www.olx.pt/q-sony-a7-iv/"
+      - "https://www.custojusto.pt/portugal/q/sony%20a7%20iv"
+    blacklist: ["a7 iii"]
+    max_buy_price: 1400
+
+  - name: "GoPro Hero 13"
+    keywords: ["gopro hero 13", "hero 13"]
+    search_urls:
+      - "https://www.olx.pt/q-gopro-hero-13/"
+    reference_urls:
+      - "https://www.olx.pt/q-gopro-hero-13/"
+      - "https://www.custojusto.pt/portugal/q/gopro%20hero%2013"
+    blacklist: []
+    max_buy_price: 320
+
+  - name: "DJI Mini 4 Pro"
+    keywords: ["dji mini 4 pro"]
+    search_urls:
+      - "https://www.olx.pt/q-dji-mini-4-pro/"
+    reference_urls:
+      - "https://www.olx.pt/q-dji-mini-4-pro/"
+      - "https://www.custojusto.pt/portugal/q/dji%20mini%204%20pro"
+    blacklist: []
+    max_buy_price: 700
+
+  - name: "Insta360 X4"
+    keywords: ["insta360", "x4"]
+    search_urls:
+      - "https://www.olx.pt/q-insta360-x4/"
+    reference_urls:
+      - "https://www.olx.pt/q-insta360-x4/"
+      - "https://www.custojusto.pt/portugal/q/insta360%20x4"
+    blacklist: ["x3"]
+    max_buy_price: 380
+
+  # Peripherals
+  - name: "Logitech MX Master 3"
+    keywords: ["mx master 3"]
+    search_urls:
+      - "https://www.olx.pt/q-mx-master-3/"
+    reference_urls:
+      - "https://www.olx.pt/q-mx-master-3/"
+      - "https://www.custojusto.pt/portugal/q/mx%20master%203"
+    blacklist: []
+    max_buy_price: 60
+
+  - name: "Razer DeathAdder V3"
+    keywords: ["deathadder v3"]
+    search_urls:
+      - "https://www.olx.pt/q-deathadder-v3/"
+    reference_urls:
+      - "https://www.olx.pt/q-deathadder-v3/"
+      - "https://www.custojusto.pt/portugal/q/deathadder%20v3"
+    blacklist: []
+    max_buy_price: 80
+
+  - name: "Keychron Q1"
+    keywords: ["keychron q1"]
+    search_urls:
+      - "https://www.olx.pt/q-keychron-q1/"
+    reference_urls:
+      - "https://www.olx.pt/q-keychron-q1/"
+      - "https://www.custojusto.pt/portugal/q/keychron%20q1"
+    blacklist: []
+    max_buy_price: 130
+
+  - name: "Stream Deck"
+    keywords: ["stream deck"]
+    search_urls:
+      - "https://www.olx.pt/q-elgato-stream-deck/"
+    reference_urls:
+      - "https://www.olx.pt/q-elgato-stream-deck/"
+      - "https://www.custojusto.pt/portugal/q/elgato%20stream%20deck"
+    blacklist: ["steam deck"]
+    max_buy_price: 90
+
+  # Storage / NAS / network
+  - name: "Synology DS224+"
+    keywords: ["synology ds224"]
+    search_urls:
+      - "https://www.olx.pt/q-synology-ds224/"
+    reference_urls:
+      - "https://www.olx.pt/q-synology-ds224/"
+      - "https://www.custojusto.pt/portugal/q/synology%20ds224"
+    blacklist: []
+    max_buy_price: 280
+
+  - name: "Synology DS923+"
+    keywords: ["synology ds923"]
+    search_urls:
+      - "https://www.olx.pt/q-synology-ds923/"
+    reference_urls:
+      - "https://www.olx.pt/q-synology-ds923/"
+      - "https://www.custojusto.pt/portugal/q/synology%20ds923"
+    blacklist: []
+    max_buy_price: 530
+
+  - name: "QNAP TS-464"
+    keywords: ["qnap ts-464"]
+    search_urls:
+      - "https://www.olx.pt/q-qnap-ts-464/"
+    reference_urls:
+      - "https://www.olx.pt/q-qnap-ts-464/"
+      - "https://www.custojusto.pt/portugal/q/qnap%20ts-464"
+    blacklist: []
+    max_buy_price: 380
+
+  # Smart-home / robots
+  - name: "Roborock Q Revo"
+    keywords: ["q revo"]
+    search_urls:
+      - "https://www.olx.pt/q-roborock-q-revo/"
+    reference_urls:
+      - "https://www.olx.pt/q-roborock-q-revo/"
+      - "https://www.custojusto.pt/portugal/q/roborock%20q%20revo"
+    blacklist: []
+    max_buy_price: 350
+
+  - name: "Dyson V15"
+    keywords: ["dyson v15"]
+    search_urls:
+      - "https://www.olx.pt/q-dyson-v15/"
+    reference_urls:
+      - "https://www.olx.pt/q-dyson-v15/"
+      - "https://www.custojusto.pt/portugal/q/dyson%20v15"
+    blacklist: ["v11", "v12"]
+    max_buy_price: 380
+
+  - name: "Dyson V11"
+    keywords: ["dyson v11"]
+    search_urls:
+      - "https://www.olx.pt/q-dyson-v11/"
+    reference_urls:
+      - "https://www.olx.pt/q-dyson-v11/"
+      - "https://www.custojusto.pt/portugal/q/dyson%20v11"
+    blacklist: ["v15"]
+    max_buy_price: 200
+
+  # E-bikes / mobility
+  - name: "Xiaomi Mi Scooter Pro 2"
+    keywords: ["mi scooter", "pro 2"]
+    search_urls:
+      - "https://www.olx.pt/q-xiaomi-mi-scooter-pro-2/"
+    reference_urls:
+      - "https://www.olx.pt/q-xiaomi-mi-scooter-pro-2/"
+      - "https://www.custojusto.pt/portugal/q/xiaomi%20mi%20scooter%20pro%202"
+    blacklist: []
+    max_buy_price: 250
+
+  - name: "Segway Ninebot Max"
+    keywords: ["ninebot max"]
+    search_urls:
+      - "https://www.olx.pt/q-segway-ninebot-max/"
+    reference_urls:
+      - "https://www.olx.pt/q-segway-ninebot-max/"
+      - "https://www.custojusto.pt/portugal/q/segway%20ninebot%20max"
+    blacklist: []
+    max_buy_price: 380
+
+  # Misc high-resale items
+  - name: "LEGO Star Wars UCS"
+    keywords: ["lego", "star wars", "ucs"]
+    search_urls:
+      - "https://www.olx.pt/q-lego-star-wars-ucs/"
+    reference_urls:
+      - "https://www.olx.pt/q-lego-star-wars-ucs/"
+      - "https://www.custojusto.pt/portugal/q/lego%20star%20wars%20ucs"
+    blacklist: ["incompleto", "sem manual"]
+    max_buy_price: 250
+
+  - name: "Apple TV 4K"
+    keywords: ["apple tv 4k"]
+    search_urls:
+      - "https://www.olx.pt/q-apple-tv-4k/"
+    reference_urls:
+      - "https://www.olx.pt/q-apple-tv-4k/"
+      - "https://www.custojusto.pt/portugal/q/apple%20tv%204k"
+    blacklist: ["sem comando"]
+    max_buy_price: 130
+
+  - name: "Meta Quest 3"
+    keywords: ["meta quest 3"]
+    search_urls:
+      - "https://www.olx.pt/q-meta-quest-3/"
+    reference_urls:
+      - "https://www.olx.pt/q-meta-quest-3/"
+      - "https://www.custojusto.pt/portugal/q/meta%20quest%203"
+    blacklist: ["quest 2"]
+    max_buy_price: 380
+
+  - name: "Meta Quest 2"
+    keywords: ["meta quest 2"]
+    search_urls:
+      - "https://www.olx.pt/q-meta-quest-2/"
+    reference_urls:
+      - "https://www.olx.pt/q-meta-quest-2/"
+      - "https://www.custojusto.pt/portugal/q/meta%20quest%202"
+    blacklist: ["quest 3"]
+    max_buy_price: 180
+
+  - name: "PlayStation VR2"
+    keywords: ["psvr2", "playstation vr2"]
+    search_urls:
+      - "https://www.olx.pt/q-psvr-2/"
+    reference_urls:
+      - "https://www.olx.pt/q-psvr-2/"
+      - "https://www.custojusto.pt/portugal/q/psvr%202"
+    blacklist: []
+    max_buy_price: 350
+
+  - name: "TV LG OLED C3"
+    keywords: ["lg", "oled", "c3"]
+    search_urls:
+      - "https://www.olx.pt/q-lg-oled-c3/"
+    reference_urls:
+      - "https://www.olx.pt/q-lg-oled-c3/"
+      - "https://www.custojusto.pt/portugal/q/lg%20oled%20c3"
+    blacklist: ["pixels mortos", "queimaduras"]
+    max_buy_price: 900
+
+  - name: "TV Samsung QLED"
+    keywords: ["samsung", "qled"]
+    search_urls:
+      - "https://www.olx.pt/q-samsung-qled/"
+    reference_urls:
+      - "https://www.olx.pt/q-samsung-qled/"
+      - "https://www.custojusto.pt/portugal/q/samsung%20qled"
+    blacklist: ["pixels mortos", "ecra partido", "ecrã partido"]
+    max_buy_price: 600
+
+  - name: "Soundbar Sonos Beam"
+    keywords: ["sonos beam"]
+    search_urls:
+      - "https://www.olx.pt/q-sonos-beam/"
+    reference_urls:
+      - "https://www.olx.pt/q-sonos-beam/"
+      - "https://www.custojusto.pt/portugal/q/sonos%20beam"
+    blacklist: []
+    max_buy_price: 280
+
+  - name: "Sonos Era 100"
+    keywords: ["sonos era 100"]
+    search_urls:
+      - "https://www.olx.pt/q-sonos-era-100/"
+    reference_urls:
+      - "https://www.olx.pt/q-sonos-era-100/"
+      - "https://www.custojusto.pt/portugal/q/sonos%20era%20100"
+    blacklist: []
+    max_buy_price: 180
+
+  # Lights / streaming gear
+  - name: "Elgato Cam Link"
+    keywords: ["cam link"]
+    search_urls:
+      - "https://www.olx.pt/q-elgato-cam-link/"
+    reference_urls:
+      - "https://www.olx.pt/q-elgato-cam-link/"
+      - "https://www.custojusto.pt/portugal/q/cam%20link"
+    blacklist: []
+    max_buy_price: 80
+
+  - name: "Shure SM7B"
+    keywords: ["sm7b"]
+    search_urls:
+      - "https://www.olx.pt/q-shure-sm7b/"
+    reference_urls:
+      - "https://www.olx.pt/q-shure-sm7b/"
+      - "https://www.custojusto.pt/portugal/q/shure%20sm7b"
+    blacklist: []
+    max_buy_price: 320

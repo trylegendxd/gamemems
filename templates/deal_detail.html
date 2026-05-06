@@ -9,8 +9,9 @@
 <main class="detail">
   <div class="detail-grid">
     <div class="detail-img">
-      {% if deal.image_url %}
-        <img referrerpolicy="no-referrer" src="{{ deal.image_url }}" alt="{{ deal.title }}">
+      {% if deal.image_url and (deal.image_url.startswith('http://') or deal.image_url.startswith('https://')) %}
+        <img referrerpolicy="no-referrer" src="{{ deal.image_url }}" alt="{{ deal.title }}"
+             onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'img-placeholder',textContent:'sem imagem'}))">
       {% else %}
         <div class="img-placeholder">sem imagem</div>
       {% endif %}

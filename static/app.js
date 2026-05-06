@@ -76,8 +76,16 @@ function renderDeals(deals) {
     if (!d.seen) node.classList.add("unseen");
 
     const img = node.querySelector("img");
-    if (d.image_url) {
-      img.src = d.image_url; img.alt = d.title;
+    // Reject data: URIs (placeholder lazy-load images) and bare protocol-less
+    // strings — those usually end up as 404s. If the image fails to load we
+    // remove the element so the card isn't decorated with a broken icon.
+    const candidate = (d.image_url || "").trim();
+    const isUsable = candidate && !candidate.startsWith("data:") &&
+                     (candidate.startsWith("http://") || candidate.startsWith("https://"));
+    if (isUsable) {
+      img.src = candidate;
+      img.alt = d.title;
+      img.addEventListener("error", () => img.remove(), { once: true });
     } else {
       img.remove();
     }

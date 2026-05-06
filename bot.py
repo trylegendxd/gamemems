@@ -649,8 +649,59 @@ class MarketplaceScraper:
 
     # ── OLX parser ────────────────────────────────────────────────────────────
 
+    # How many search-result pages to walk per URL before giving up. Default is
+    # generous because OLX queries for popular products (iPhone, RTX 3060)
+    # routinely span >100 listings, and stopping at page 1 silently dropped
+    # them. A page that returns zero new cards short-circuits the loop, so
+    # niche queries don't waste requests.
+    OLX_MAX_PAGES = int(os.getenv("OLX_MAX_PAGES", "5"))
+
+    def _olx_page_url(self, url: str, page: int) -> str:
+        """Append ?page=N to an OLX search URL, preserving any existing query."""
+        if page <= 1:
+            return url
+        sep = "&" if "?" in url else "?"
+        return f"{url}{sep}page={page}"
+
     def scrape_olx(self, url: str) -> List["Listing"]:
-        html = self.fetch_html(url)
+        listings: List[Listing] = []
+        seen_urls = set()
+        prev_count = -1
+        for page in range(1, self.OLX_MAX_PAGES + 1):
+            page_url = self._olx_page_url(url, page)
+            try:
+                html = self.fetch_html(page_url)
+            except Exception as e:
+                if page == 1:
+                    raise
+                log.info("[OLX-PAGE] %s page=%d stopping (%s)", url, page, e)
+                break
+            page_listings = self._parse_olx_page(html)
+            new_on_page = 0
+            for item in page_listings:
+                key = item.url.split("?")[0]
+                if key in seen_urls:
+                    continue
+                seen_urls.add(key)
+                listings.append(item)
+                new_on_page += 1
+            log.info("[OLX-PAGE] %s page=%d cards=%d new=%d total=%d",
+                     url, page, len(page_listings), new_on_page, len(listings))
+            # Stop early when:
+            #   - the page returned nothing (last page reached or rate-limited),
+            #   - the page returned fewer cards than the previous page (often
+            #     a sign that we've walked off the end onto an "explore"-style
+            #     suggestion page),
+            #   - all returned cards were duplicates (shouldn't happen but is
+            #     defensive against OLX cyclic pagination).
+            if new_on_page == 0:
+                break
+            if prev_count >= 0 and len(page_listings) < prev_count // 2:
+                break
+            prev_count = len(page_listings)
+        return dedupe_listings(listings)
+
+    def _parse_olx_page(self, html: str) -> List["Listing"]:
         soup = BeautifulSoup(html, "html.parser")
         listings: List[Listing] = []
 
@@ -661,7 +712,15 @@ class MarketplaceScraper:
             cards = soup.select("li:has(a[href])")
 
         for card in cards:
-            a = card.find("a", href=True)
+            # Prefer the actual ad link (matches /d/anuncio/) over the first
+            # <a> in the card, which is sometimes a breadcrumb / favourite
+            # button. Falling back keeps the previous behaviour for cards
+            # that haven't migrated to the new URL scheme.
+            a = (
+                card.select_one("a[href*='/d/anuncio/']")
+                or card.select_one("a[href*='/anuncio/']")
+                or card.find("a", href=True)
+            )
             if not a:
                 continue
 
@@ -677,7 +736,8 @@ class MarketplaceScraper:
                 or card.select_one(".css-1s3qyje")   # OLX title class (may change)
             )
             title = clean_text(title_el.get_text(" ") if title_el else a.get_text(" "))
-            if len(title) < 5:
+            # 3-char floor (was 5) — was dropping legit titles like "PS5".
+            if len(title) < 3:
                 continue
 
             # Price
@@ -717,10 +777,45 @@ class MarketplaceScraper:
 
             # Image: OLX cards put the thumbnail in <img src="..."> or
             # data-src for lazy-loaded ones.
+            # Image extraction is fiddly: OLX lazy-loads ad thumbnails so
+            # `src` is usually a 1x1 base64 placeholder. The real URL lives
+            # in `data-src` or in `srcset` (multiple resolutions; pick the
+            # largest). Reject data: URIs entirely so they never end up on
+            # the dashboard.
             image_url = ""
-            img_el = card.select_one("img[src]") or card.select_one("img[data-src]")
+            img_el = card.select_one("img")
             if img_el:
-                image_url = img_el.get("src") or img_el.get("data-src") or ""
+                # Try `srcset` first — picks the highest-res candidate.
+                srcset = img_el.get("srcset") or img_el.get("data-srcset") or ""
+                if srcset:
+                    candidates = []
+                    for chunk in srcset.split(","):
+                        parts = chunk.strip().split()
+                        if not parts:
+                            continue
+                        u = parts[0]
+                        # Width descriptor like "640w", else 0.
+                        w = 0
+                        if len(parts) > 1 and parts[1].endswith("w"):
+                            try:
+                                w = int(parts[1][:-1])
+                            except ValueError:
+                                w = 0
+                        if u and not u.startswith("data:"):
+                            candidates.append((w, u))
+                    if candidates:
+                        candidates.sort()
+                        image_url = candidates[-1][1]
+
+                # Fallback chain: data-src (lazy-load real URL) → src (only
+                # if not a data: URI).
+                if not image_url:
+                    for attr in ("data-src", "data-original", "src"):
+                        v = img_el.get(attr) or ""
+                        if v and not v.startswith("data:"):
+                            image_url = v
+                            break
+
                 if image_url and not image_url.startswith("http"):
                     image_url = urljoin("https://www.olx.pt", image_url)
 
@@ -737,24 +832,62 @@ class MarketplaceScraper:
                 condition=condition,
             ))
 
-        return dedupe_listings(listings)
+        # Dedup happens in the outer scrape_olx() across pages; this method
+        # returns raw listings so per-page diagnostics stay accurate.
+        return listings
 
     # ── CustoJusto parser ─────────────────────────────────────────────────────
     # CustoJusto is a Next.js app — listings are embedded as JSON inside
     # <script id="__NEXT_DATA__">. CSS-based scraping returns garbage because
     # the visible DOM is hydrated client-side.
 
-    def scrape_custojusto(self, url: str) -> List["Listing"]:
-        html = self.fetch_html(url)
-        listings: List[Listing] = []
+    CJ_MAX_PAGES = int(os.getenv("CJ_MAX_PAGES", "3"))
 
+    def _custojusto_page_url(self, url: str, page: int) -> str:
+        """CustoJusto paginates with `?o=N` (offset/page index)."""
+        if page <= 1:
+            return url
+        sep = "&" if "?" in url else "?"
+        return f"{url}{sep}o={page}"
+
+    def scrape_custojusto(self, url: str) -> List["Listing"]:
+        listings: List[Listing] = []
+        seen_urls = set()
+        prev_count = -1
+        for page in range(1, self.CJ_MAX_PAGES + 1):
+            page_url = self._custojusto_page_url(url, page)
+            try:
+                html = self.fetch_html(page_url)
+            except Exception as e:
+                if page == 1:
+                    raise
+                log.info("[CJ-PAGE] %s page=%d stopping (%s)", url, page, e)
+                break
+            page_listings = self._parse_custojusto_page(page_url, html)
+            new_on_page = 0
+            for item in page_listings:
+                key = item.url.split("?")[0]
+                if key in seen_urls:
+                    continue
+                seen_urls.add(key)
+                listings.append(item)
+                new_on_page += 1
+            log.info("[CJ-PAGE] %s page=%d items=%d new=%d total=%d",
+                     url, page, len(page_listings), new_on_page, len(listings))
+            if new_on_page == 0:
+                break
+            if prev_count >= 0 and len(page_listings) < prev_count // 2:
+                break
+            prev_count = len(page_listings)
+        return dedupe_listings(listings)
+
+    def _parse_custojusto_page(self, url: str, html: str) -> List["Listing"]:
+        listings: List[Listing] = []
         m = re.search(
             r'<script id="__NEXT_DATA__"[^>]*>(.+?)</script>',
             html, flags=re.DOTALL,
         )
         if not m:
-            # Page structure changed — fall back to generic scrape so we still
-            # try (and at least log nothing-found rather than crash).
             soup = BeautifulSoup(html, "html.parser")
             return self._scrape_generic_links(url, soup, "CustoJusto")
 
@@ -766,7 +899,7 @@ class MarketplaceScraper:
 
         for it in items:
             title = clean_text(it.get("title", ""))
-            if len(title) < 5:
+            if len(title) < 3:
                 continue
             price = it.get("price")
             try:
@@ -786,6 +919,8 @@ class MarketplaceScraper:
             body = clean_text(it.get("body", ""))
             raw_text = clean_text(f"{title} {body} {location}")[:1000]
             image_url = it.get("imageFullURL") or ""
+            if image_url and image_url.startswith("data:"):
+                image_url = ""
 
             condition = pricing.detect_condition(f"{title} {body}")
 
@@ -801,7 +936,7 @@ class MarketplaceScraper:
                 condition=condition,
             ))
 
-        return dedupe_listings(listings)
+        return listings
 
     # ── Generic fallback ──────────────────────────────────────────────────────
 
