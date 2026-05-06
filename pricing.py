@@ -32,7 +32,7 @@ DAMAGE_KEYWORDS: Tuple[str, ...] = (
     "partido", "partida", "quebrado", "quebrada",
     "defeito", "defeituoso", "defeituosa",
     "estragado", "estragada", "danificado", "danificada",
-    "para peças", "para pecas", "peças", "pecas",
+    "para peças", "para pecas",
     "reparar", "reparação", "reparacao", "para reparação",
     "não funciona", "nao funciona", "não liga", "nao liga",
     "sem garantia", "garantia não", "garantia nao",

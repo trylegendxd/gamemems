@@ -62,6 +62,13 @@ class TestDamageDetection(unittest.TestCase):
             self.assertIsNotNone(pricing.find_damage_keyword(phrase),
                                  f"should flag: {phrase}")
 
+
+    def test_ambiguous_pecas_word_alone_is_not_flagged(self):
+        self.assertIsNone(pricing.find_damage_keyword("Vendo peças e acessórios originais"))
+
+    def test_para_pecas_phrase_is_flagged(self):
+        self.assertIsNotNone(pricing.find_damage_keyword("Macbook para pecas para reparação"))
+
     def test_clean_phrase_passes(self):
         self.assertIsNone(pricing.find_damage_keyword("RTX 3060 12GB como nova"))
         self.assertIsNone(pricing.find_damage_keyword("MacBook M2 selado na caixa"))
