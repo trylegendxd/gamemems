@@ -2,6 +2,7 @@
 import os
 import sys
 import unittest
+from unittest.mock import patch
 
 # Make repo root importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -113,6 +114,15 @@ class TestApiEvaluate(unittest.TestCase):
         )
         self.assertEqual(r.status_code, 200)
         self.assertIn(r.get_json()["verdict"], ("bad_deal", "unreliable"))
+
+
+    def test_health_transient_db_error_stays_ok(self):
+        # A transient DB error should recover within the retry loop.
+        with patch.object(app_module.db, "stats_summary", side_effect=[Exception("tls blip"), None]):
+            r = self.client.get("/health")
+        self.assertEqual(r.status_code, 200)
+        data = r.get_json()
+        self.assertEqual(data.get("status"), "ok")
 
     def test_cors_preflight(self):
         r = self.client.open(

@@ -24,8 +24,11 @@ from dotenv import load_dotenv
 import pricing
 
 
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(exist_ok=True)
+# Base directory for persisted runtime state. Can be overridden with
+# BOT_DATA_DIR; otherwise anchored to this module so cwd changes don't fork data.
+_DEFAULT_DATA_DIR = Path(__file__).resolve().parent / "data"
+DATA_DIR = Path(os.getenv("BOT_DATA_DIR", str(_DEFAULT_DATA_DIR))).expanduser().resolve()
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 SEEN_FILE = DATA_DIR / "seen.json"
 MARKET_CACHE_FILE = DATA_DIR / "market_cache.json"
 
