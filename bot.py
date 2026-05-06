@@ -110,6 +110,52 @@ _VARIANT_SUFFIXES = r"(?:ti|super|xt|xtx|gre|max-q)"
 # by specific model and compare apples to apples.
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Known storage tiers (in GB). Anything outside this set is rejected as a
+# false positive — "8gb" in "ram ddr4 8gb" would otherwise pollute phone
+# fingerprints. Storage detection is intentionally conservative; we only
+# stamp a value into the model key when we're confident it's the device's
+# storage tier (i.e., a known phone/tablet capacity).
+_PHONE_STORAGE_TIERS = (64, 128, 256, 512, 1024, 2048)
+# 1-4 digits so "1tb" / "2tb" still match. The tier whitelist below filters
+# out junk (e.g. "8gb ram" wouldn't be a phone storage tier).
+_PHONE_STORAGE_RE = re.compile(r"\b(\d{1,4})\s*(gb|tb)\b")
+# VRAM tiers actually shipped on consumer GPUs.
+_GPU_VRAM_TIERS = (4, 6, 8, 10, 12, 16, 20, 24, 32)
+_GPU_VRAM_RE = re.compile(r"\b(\d{1,2})\s*gb\b")
+
+
+def _extract_phone_storage(t: str) -> Optional[str]:
+    """Return canonical storage label like "128gb" / "1tb" if a known phone
+    storage tier appears in the title; else None.
+
+    Captures only the first valid match; titles with multiple sizes (e.g.
+    "iphone 13 256gb e 512gb") are ambiguous so we'd rather not fingerprint.
+    """
+    found = []
+    for m in _PHONE_STORAGE_RE.finditer(t):
+        n = int(m.group(1))
+        unit = m.group(2)
+        gb = n if unit == "gb" else n * 1024
+        if gb in _PHONE_STORAGE_TIERS:
+            found.append(gb)
+    if not found:
+        return None
+    # If a single tier or the smallest is matched (handles cases where a
+    # listing mentions both the phone's storage and an unrelated number)
+    chosen = found[0]
+    if chosen >= 1024:
+        return f"{chosen // 1024}tb"
+    return f"{chosen}gb"
+
+
+def _extract_gpu_vram(t: str) -> Optional[str]:
+    """Pick the GPU VRAM (4/6/8/10/12/16/20/24/32 GB) when present in title."""
+    for m in _GPU_VRAM_RE.finditer(t):
+        n = int(m.group(1))
+        if n in _GPU_VRAM_TIERS:
+            return f"{n}gb"
+    return None
+
 # Rules are tried in order; first match wins.
 # Each rule is (category_tag, pattern_that_must_match, extractor_function).
 # The extractor receives the normalized title and returns a model key string,
@@ -125,6 +171,9 @@ def _extract_ipad_model(t: str) -> Optional[str]:
       "ipad 10 geracao"      -> "ipad 10"
       "ipad pro 12.9 2022"   -> "ipad pro 12.9"
     """
+    storage = _extract_phone_storage(t)
+    storage_suffix = f" {storage}" if storage else ""
+
     # iPad Pro / Air / mini with optional size and chip/gen
     m = re.search(r"ipad (pro|air|mini)\s*(\d+[\.,]?\d*)?(?:\s+(m\d|a\d{2}\w*|\d{1,2}(?:th|st|nd|rd)?\s*gen(?:eracao|eration)?))?", t)
     if m:
@@ -137,22 +186,23 @@ def _extract_ipad_model(t: str) -> Optional[str]:
         if chip:
             chip = re.sub(r"\s*(th|st|nd|rd)?\s*gen(eracao|eration)?", "gen", chip)
             key += f" {chip}"
-        return key
+        return key + storage_suffix
     # Base iPad with generation number
     m = re.search(r"ipad\s+(\d{1,2})(?:\s*(?:th|st|nd|rd|a|o)?\s*(?:gen|geracao|generation))?", t)
     if m:
-        return f"ipad gen{m.group(1)}"
+        return f"ipad gen{m.group(1)}" + storage_suffix
     # Just "ipad" with year
     m = re.search(r"ipad\s+(20\d\d)", t)
     if m:
-        return f"ipad {m.group(1)}"
-    return "ipad"  # generic fallback — still better than nothing
+        return f"ipad {m.group(1)}" + storage_suffix
+    return "ipad" + storage_suffix  # generic fallback — still better than nothing
 
 
 def _extract_iphone_model(t: str) -> Optional[str]:
     """
-    "iphone 13 pro max 256" -> "iphone 13 pro max"
-    "iphone 15 128gb"       -> "iphone 15"
+    "iphone 13 pro max 256gb" -> "iphone 13 pro max 256gb"
+    "iphone 15 128gb"          -> "iphone 15 128gb"
+    "iphone 15"                -> "iphone 15"   (no storage detected)
     """
     m = re.search(r"iphone\s+(\d{1,2})\s*(pro\s*max|pro\s*plus|pro|plus|mini)?", t)
     if not m:
@@ -162,13 +212,16 @@ def _extract_iphone_model(t: str) -> Optional[str]:
     key = f"iphone {number}"
     if variant:
         key += f" {variant}"
+    storage = _extract_phone_storage(t)
+    if storage:
+        key += f" {storage}"
     return key
 
 
 def _extract_samsung_model(t: str) -> Optional[str]:
     """
-    "samsung galaxy s22 ultra" -> "samsung s22 ultra"
-    "samsung a54"              -> "samsung a54"
+    "samsung galaxy s22 ultra 256gb" -> "samsung s22 ultra 256gb"
+    "samsung a54 128gb"               -> "samsung a54 128gb"
     """
     m = re.search(r"(?:samsung\s+)?(?:galaxy\s+)?(s\d{1,2}|a\d{2}|m\d{2}|z\s*fold\s*\d?|z\s*flip\s*\d?)\s*(ultra|plus|\+|fe)?", t)
     if not m:
@@ -178,13 +231,16 @@ def _extract_samsung_model(t: str) -> Optional[str]:
     key = f"samsung {model}"
     if variant:
         key += f" {variant}"
+    storage = _extract_phone_storage(t)
+    if storage:
+        key += f" {storage}"
     return key
 
 
 def _extract_macbook_model(t: str) -> Optional[str]:
     """
-    "macbook air m2 13" -> "macbook air m2"
-    "macbook pro 14 m3" -> "macbook pro 14 m3"
+    "macbook air m2 13 256gb" -> "macbook air m2 13 256gb"
+    "macbook pro 14 m3 1tb"   -> "macbook pro m3 14 1tb"
     """
     m = re.search(r"macbook\s+(air|pro)\s*(\d{2})?\s*(m\d)?", t)
     if not m:
@@ -197,14 +253,26 @@ def _extract_macbook_model(t: str) -> Optional[str]:
         key += f" {chip}"
     if size:
         key += f" {size}"
+    # If the regex didn't capture a size between variant/chip (common for
+    # listings ordered "macbook air m2 13 256gb"), look for one after the
+    # chip too — sizes are 13/14/15/16 inches.
+    if not size and chip:
+        m2 = re.search(r"\bmacbook\s+(?:air|pro)\s+m\d\s+(13|14|15|16)\b", t)
+        if m2:
+            size = m2.group(1)
+            key += f" {size}"
+    storage = _extract_phone_storage(t)
+    if storage:
+        key += f" {storage}"
     return key
 
 
 def _extract_gpu_model(t: str) -> Optional[str]:
     """
-    "rtx 3060 ti 12gb msi" -> "rtx 3060 ti"
-    "rx 6700 xt"           -> "rx 6700 xt"
-    "gtx 1080 ti"          -> "gtx 1080 ti"
+    "rtx 3060 ti 12gb msi" -> "rtx 3060 ti 12gb"
+    "rtx 3060 8gb"          -> "rtx 3060 8gb"   (8GB and 12GB are different SKUs!)
+    "rx 6700 xt"            -> "rx 6700 xt"
+    "gtx 1080 ti"           -> "gtx 1080 ti"
     """
     m = re.search(r"(rtx|gtx|rx)\s*(\d{3,4})\s*(ti|super|xt|xtx|gre)?", t)
     if not m:
@@ -215,6 +283,9 @@ def _extract_gpu_model(t: str) -> Optional[str]:
     key = f"{family} {number}"
     if suffix:
         key += f" {suffix}"
+    vram = _extract_gpu_vram(t)
+    if vram:
+        key += f" {vram}"
     return key
 
 
@@ -266,22 +337,40 @@ def titles_same_model(title_a: str, title_b: str) -> bool:
     return key_a == key_b
 
 
+# Keywords that look like GPU model identifiers — only these get the
+# variant-suffix rejection treatment. Applying it to every keyword causes
+# false positives for short tokens like "m1" / "i5" colliding with the
+# Portuguese marketing word "super" ("M1 super condição").
+_GPU_KEYWORD_RE = re.compile(r"\b(rtx|gtx|rx|radeon)\s*\d{3,4}\b")
+
+
 def title_matches(title: str, keywords: List[str]) -> bool:
     """
-    Returns True only if ALL keywords appear in the title.
-    Also rejects titles where a keyword is immediately followed by a variant
-    suffix that would make it a different product (e.g. searching "rtx 3060"
-    should not match "rtx 3060 ti").
+    Returns True only if ALL keywords appear in the title (whole-word match).
+
+    Variant-suffix rejection: when a keyword looks like a GPU model
+    (e.g. "rtx 3060", "rx 6800"), the title is rejected if the keyword is
+    immediately followed by a SKU-changing suffix (`ti`, `super`, `xt`,
+    `xtx`, `gre`, `max-q`). This prevents a "RTX 3060" watchlist from
+    matching "RTX 3060 Ti" listings.
+
+    For non-GPU keywords this rejection does NOT apply, because suffixes
+    like "super" are common adjectives in Portuguese listings ("M1 super
+    estado", "i5 super preço") and would silently swallow legitimate
+    matches.
     """
     t = normalize(title)
     for k in keywords:
-        nk = re.escape(normalize(k))
+        nk_norm = normalize(k)
+        nk = re.escape(nk_norm)
         if not re.search(r"(?<![a-z0-9])" + nk + r"(?![a-z0-9])", t):
             return False
-        # Reject if the keyword is immediately followed by a variant suffix
-        # that turns it into a different SKU (e.g. "rtx 3060 ti", "rx 6700 xt")
-        if re.search(r"(?<![a-z0-9])" + nk + r"\s*(?:ti|super|xt|xtx|gre|max-q)(?![a-z0-9])", t):
-            return False
+        if _GPU_KEYWORD_RE.search(nk_norm):
+            if re.search(
+                r"(?<![a-z0-9])" + nk + r"\s*(?:ti|super|xt|xtx|gre|max-q)(?![a-z0-9])",
+                t,
+            ):
+                return False
     return True
 
 
@@ -1211,22 +1300,67 @@ def estimate_market_value(
     }
 
 
+def _model_key_drop_last_token(key: str) -> Optional[str]:
+    """Drop the last token of a model key — used to walk up the precision
+    ladder (e.g. "iphone 15 pro 256gb" → "iphone 15 pro" → "iphone 15")."""
+    parts = key.split()
+    if len(parts) <= 1:
+        return None
+    return " ".join(parts[:-1])
+
+
+# A bucket is "trusted enough" to keep when it carries this many filtered
+# comparables. Below it we walk up the precision ladder to find a wider
+# bucket. Lower than the global `min_filtered_sample_size` so we still
+# *prefer* a tight bucket — we just refuse to live with a 1- or 2-listing
+# match when a less specific bucket has many more.
+_MIN_BUCKET_SIZE_FOR_EXACT = 4
+
+
 def get_market_for_listing(market: Dict, listing: "Listing") -> Dict:
     """
     Pick the tightest applicable market stats for this specific listing.
-    Priority: exact model match > global fallback.
+
+    Precision ladder:
+        1. exact key (e.g. "iphone 15 pro 256gb")
+        2. parent keys, dropping one trailing token at a time
+           ("iphone 15 pro 256gb" → "iphone 15 pro" → "iphone 15")
+        3. partial substring match against any other model bucket
+        4. global pool
+
+    Each step skips buckets that don't meet `_MIN_BUCKET_SIZE_FOR_EXACT`
+    so a 1-listing exact match doesn't beat a 30-listing parent. The
+    `_match` label records what we ended up using ("exact:..." /
+    "partial:..." / "global") so the reliability score and Telegram alert
+    can describe the precision.
     """
+    by_model = market.get("by_model", {})
     model_key = extract_model_key(listing.title)
     if model_key:
-        by_model = market.get("by_model", {})
-        if model_key in by_model:
-            stats = by_model[model_key]
-            if stats.get("market_value") is not None:
-                return {**stats, "_match": f"exact:{model_key}"}
-        # Try partial match (e.g. "ipad pro 11" matches "ipad pro 11 m2" pool)
+        # Climb the precision ladder.
+        candidate = model_key
+        while candidate:
+            stats = by_model.get(candidate)
+            if (stats and stats.get("market_value") is not None
+                    and stats.get("filtered_sample_size", 0) >= _MIN_BUCKET_SIZE_FOR_EXACT):
+                label = "exact" if candidate == model_key else "partial"
+                return {**stats, "_match": f"{label}:{candidate}"}
+            parent = _model_key_drop_last_token(candidate)
+            if parent == candidate:
+                break
+            candidate = parent
+
+        # As a last resort, accept a thinner exact-key bucket so we don't
+        # silently fall to global when *some* exact data exists.
+        stats = by_model.get(model_key)
+        if stats and stats.get("market_value") is not None:
+            return {**stats, "_match": f"exact:{model_key}"}
+
+        # Substring partial match against any other bucket
         for k, stats in by_model.items():
             if (model_key in k or k in model_key) and stats.get("market_value") is not None:
                 return {**stats, "_match": f"partial:{k}"}
+
     # Fallback to global
     return {**market.get("global", {}), "_match": "global"}
 
