@@ -228,27 +228,33 @@ def compute_reliability(
     match_type: str,
     iqr_relative: Optional[float] = None,
     target_sample: int = 15,
+    source_diversity: int = 1,
 ) -> float:
     """Reliability ∈ [0, 1].
 
     Combines:
       - sample size (saturating at `target_sample`)
       - match precision (exact > partial > global)
-      - retention rate (how much survived filtering — low retention means the
-        market signal is weak relative to noise)
+      - retention rate (how much survived filtering)
       - IQR width relative to median (penalty for dispersed markets)
+      - source diversity (small additive bonus when ≥2 distinct marketplaces
+        contribute, since cross-source agreement reduces site-specific bias)
     """
     if filtered_sample <= 0 or raw_sample <= 0:
         return 0.0
     size_factor = min(1.0, filtered_sample / float(max(1, target_sample)))
     match_factor = _MATCH_TYPE_WEIGHTS.get(match_type, 0.4)
-    # Retention rate: floor at 0.3 because some queries naturally produce a
-    # noisy raw pool where most rows are filtered out (mostly bundles).
     retention = max(0.3, filtered_sample / max(1, raw_sample))
     score = 0.5 * size_factor + 0.35 * match_factor + 0.15 * retention
     if iqr_relative is not None and iqr_relative > 0.5:
-        # IQR > 50% of median = very dispersed → cap the score.
         score *= max(0.5, 1.0 - (iqr_relative - 0.5))
+    # Source-diversity bonus: +0.05 for two sources, +0.08 for three or more.
+    # Capped so a single-source query can't masquerade as multi-source by
+    # exceeding 1.0.
+    if source_diversity >= 3:
+        score += 0.08
+    elif source_diversity == 2:
+        score += 0.05
     return round(min(1.0, max(0.0, score)), 2)
 
 
@@ -259,6 +265,7 @@ def compute_reliability(
 def build_market_stats(
     prices: List[float],
     settings: Optional[Dict[str, Any]] = None,
+    sources: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Compute median + dispersion stats for a price list.
 
@@ -270,14 +277,29 @@ def build_market_stats(
         "min": float | None,
         "max": float | None,
         "iqr_relative": float | None,
+        "source_counts": dict[str, int],  # raw counts per source
+        "source_diversity": int,          # number of distinct sources
       }
+
+    `sources` should be a list parallel to `prices` (one source label per price);
+    when omitted, source-related fields default to {} / 0.
     """
     settings = settings or {}
-    raw = [p for p in prices if p and p > 0]
+    raw_pairs: List[Tuple[float, str]] = []
+    for i, p in enumerate(prices or []):
+        if p and p > 0:
+            label = (sources[i] if sources and i < len(sources) else "Unknown") or "Unknown"
+            raw_pairs.append((float(p), label))
+    raw = [p for p, _ in raw_pairs]
+    src_counts_raw: Dict[str, int] = {}
+    for _, s in raw_pairs:
+        src_counts_raw[s] = src_counts_raw.get(s, 0) + 1
+
     if not raw:
         return {
             "market_value": None, "sample_size": 0, "filtered_sample_size": 0,
             "min": None, "max": None, "iqr_relative": None,
+            "source_counts": {}, "source_diversity": 0,
         }
     method = settings.get("outlier_method", "iqr")
     trimmed = trim_outliers(
@@ -290,6 +312,8 @@ def build_market_stats(
         return {
             "market_value": None, "sample_size": len(raw), "filtered_sample_size": 0,
             "min": None, "max": None, "iqr_relative": None,
+            "source_counts": src_counts_raw,
+            "source_diversity": len(src_counts_raw),
         }
     med = statistics.median(trimmed)
     iqr_rel: Optional[float] = None
@@ -303,6 +327,8 @@ def build_market_stats(
         "min": round(min(trimmed), 2),
         "max": round(max(trimmed), 2),
         "iqr_relative": iqr_rel,
+        "source_counts": src_counts_raw,
+        "source_diversity": len(src_counts_raw),
     }
 
 
@@ -342,11 +368,14 @@ def evaluate_listing(
     sample_size = market.get("sample_size", 0)
     filtered_sample = market.get("filtered_sample_size", sample_size)
     match_type = market.get("_match", "global").split(":")[0] if market.get("_match") else "global"
+    source_counts = market.get("source_counts", {}) or {}
+    source_diversity = market.get("source_diversity") or len(source_counts) or 1
     reliability = compute_reliability(
         filtered_sample=filtered_sample,
         raw_sample=sample_size,
         match_type=match_type,
         iqr_relative=market.get("iqr_relative"),
+        source_diversity=source_diversity,
     )
 
     # Damage / risk keywords
@@ -386,6 +415,8 @@ def evaluate_listing(
             "match_type": match_type,
             "reasons": reasons,
             "condition": condition,
+            "source_counts": source_counts,
+            "source_diversity": source_diversity,
         }
 
     if price is None or price <= 0:
@@ -400,6 +431,8 @@ def evaluate_listing(
             "match_type": match_type,
             "reasons": reasons + ["Preço do anúncio inválido ou em falta"],
             "condition": condition,
+            "source_counts": source_counts,
+            "source_diversity": source_diversity,
         }
 
     # Margin = how much the median exceeds the listing price.
@@ -435,6 +468,9 @@ def evaluate_listing(
         f"{filtered_sample} comparáveis após filtragem (de {sample_size} brutos, "
         f"match {match_type})"
     )
+    if source_diversity >= 2:
+        srcs = ", ".join(f"{k}({v})" for k, v in sorted(source_counts.items()))
+        reasons.append(f"Fontes: {srcs}")
 
     return {
         "verdict": verdict,
@@ -447,4 +483,6 @@ def evaluate_listing(
         "match_type": match_type,
         "reasons": reasons,
         "condition": condition,
+        "source_counts": source_counts,
+        "source_diversity": source_diversity,
     }

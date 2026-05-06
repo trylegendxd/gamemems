@@ -13,7 +13,7 @@ import concurrent.futures
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Dict, Optional, Iterable, Tuple
+from typing import Callable, List, Dict, Optional, Iterable, Tuple
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -832,6 +832,41 @@ class MarketplaceScraper:
             ))
         return dedupe_listings(listings)
 
+    # ── Pluggable source registry ─────────────────────────────────────────
+    # Each adapter is a (label, predicate, parser) triple.
+    # `predicate(url)` returns True if the adapter can handle this URL.
+    # `parser(self, url)` returns a List[Listing] tagged with that label as
+    # `source`.
+    #
+    # Add a third-party marketplace by registering another tuple in
+    # SOURCE_ADAPTERS — no other code needs to change.
+    SOURCE_ADAPTERS: List[Tuple[str, "Callable[[str], bool]", str]] = []
+
+    @classmethod
+    def register_source(cls, label: str, predicate, parser_method_name: str):
+        """Register a marketplace adapter at class-import time."""
+        cls.SOURCE_ADAPTERS.append((label, predicate, parser_method_name))
+
+    def _dispatch_source(self, url: str) -> List["Listing"]:
+        for label, predicate, parser_name in self.SOURCE_ADAPTERS:
+            try:
+                if predicate(url):
+                    parser = getattr(self, parser_name)
+                    items = parser(url)
+                    # Stamp the source label so multi-source aggregation can
+                    # bucket results by adapter (used by reliability scoring).
+                    for it in items:
+                        if not it.source or it.source == "Marketplace":
+                            it.source = label
+                    return items
+            except Exception as e:
+                log.warning("[ADAPTER] %s failed on %s: %s", label, url, e)
+                raise
+        # Generic fallback — useful for one-off reference URLs the user adds.
+        html = self.fetch_html(url)
+        soup = BeautifulSoup(html, "html.parser")
+        return self._scrape_generic_links(url, soup, "Generic")
+
     def scrape_url(self, url: str) -> List["Listing"]:
         # Coalesce concurrent requests for the same URL: the first thread
         # fetches, the others wait on the Event and reuse the cached result.
@@ -852,20 +887,25 @@ class MarketplaceScraper:
 
         result: List[Listing] = []
         try:
-            if "olx.pt" in url:
-                result = self.scrape_olx(url)
-            elif "custojusto.pt" in url:
-                result = self.scrape_custojusto(url)
-            else:
-                html = self.fetch_html(url)
-                soup = BeautifulSoup(html, "html.parser")
-                result = self._scrape_generic_links(url, soup, "Marketplace")
+            result = self._dispatch_source(url)
             return result
         finally:
             with self._cache_lock:
                 self._cache[url] = result
                 self._inflight.pop(url, None)
                 event.set()
+
+
+# Register the built-in marketplace adapters.
+# Order matters: more specific predicates first.
+MarketplaceScraper.register_source(
+    "OLX",        lambda u: "olx.pt" in u,        "scrape_olx",
+)
+MarketplaceScraper.register_source(
+    "CustoJusto", lambda u: "custojusto.pt" in u, "scrape_custojusto",
+)
+# To add another marketplace, drop a `scrape_<name>(self, url)` method on
+# MarketplaceScraper and call MarketplaceScraper.register_source(...) here.
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -990,20 +1030,29 @@ def estimate_market_value(
 
     # Group by model fingerprint for tighter comparisons.
     by_model: Dict[str, List[float]] = {}
+    by_model_sources: Dict[str, List[str]] = {}
     global_prices: List[float] = []
+    global_sources: List[str] = []
     for item in filtered:
         key = extract_model_key(item.title)
         global_prices.append(item.price)
+        global_sources.append(item.source or "Unknown")
         if key:
             by_model.setdefault(key, []).append(item.price)
+            by_model_sources.setdefault(key, []).append(item.source or "Unknown")
 
     stats_opts = {
         "outlier_method": method,
         "outlier_iqr_multiplier": iqr_mult,
         "outlier_mad_threshold": mad_threshold,
     }
-    model_stats = {k: pricing.build_market_stats(v, stats_opts) for k, v in by_model.items()}
-    global_stats = pricing.build_market_stats(global_prices, stats_opts)
+    model_stats = {
+        k: pricing.build_market_stats(by_model[k], stats_opts,
+                                      sources=by_model_sources.get(k))
+        for k in by_model
+    }
+    global_stats = pricing.build_market_stats(global_prices, stats_opts,
+                                              sources=global_sources)
 
     if model_stats:
         sample_info = ", ".join(
@@ -1074,11 +1123,14 @@ def score_listing(listing: Listing, market_stats: Dict, cfg: Dict) -> Dict:
     sample_size = market_stats.get("sample_size", 0)
     filtered_sample = market_stats.get("filtered_sample_size", sample_size)
     iqr_rel = market_stats.get("iqr_relative")
+    source_counts = market_stats.get("source_counts", {}) or {}
+    source_diversity = market_stats.get("source_diversity") or len(source_counts) or 1
     reliability = pricing.compute_reliability(
         filtered_sample=filtered_sample,
         raw_sample=sample_size,
         match_type=match_type,
         iqr_relative=iqr_rel,
+        source_diversity=source_diversity,
     )
 
     # Default skeleton populated regardless of branch
@@ -1167,20 +1219,63 @@ def score_listing(listing: Listing, market_stats: Dict, cfg: Dict) -> Dict:
 # Telegram
 # ──────────────────────────────────────────────────────────────────────────────
 
-def send_telegram(token: str, chat_id: str, message: str) -> None:
+def send_telegram(token: str, chat_id: str, message: str,
+                  *, max_attempts: int = 3, backoff_base: float = 1.5) -> None:
+    """POST to Telegram's sendMessage with bounded retry on transient failures.
+
+    Telegram returns 429 with a `retry_after` field when we send too fast;
+    transient networking failures and 5xx are also retried. 4xx (other than
+    429) are surfaced immediately because retrying won't help.
+    """
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    r = requests.post(url, json={
-        "chat_id": chat_id,
-        "text": message,
-        "disable_web_page_preview": False,
-    }, timeout=20)
-    if not r.ok:
-        # Surface the Telegram error description instead of a bare HTTPError.
+    last_err = "unknown"
+    for attempt in range(max_attempts):
         try:
-            desc = r.json().get("description", r.text)
+            r = requests.post(url, json={
+                "chat_id": chat_id,
+                "text": message,
+                "disable_web_page_preview": False,
+            }, timeout=20)
+        except requests.RequestException as e:
+            last_err = f"{type(e).__name__}: {e}"
+            sleep_for = backoff_base * (2 ** attempt) + random.uniform(0, 0.5)
+            log.warning("[TG] network error attempt=%d/%d: %s — retry in %.1fs",
+                        attempt + 1, max_attempts, last_err, sleep_for)
+            time.sleep(sleep_for)
+            continue
+
+        if r.ok:
+            return
+
+        # Try to surface Telegram's structured description.
+        try:
+            data = r.json()
+            desc = data.get("description", r.text)
+            retry_after = (data.get("parameters") or {}).get("retry_after")
         except Exception:
             desc = r.text
+            retry_after = None
+
+        # 429 → respect the retry_after header when present.
+        if r.status_code == 429:
+            wait = float(retry_after) if retry_after else backoff_base * (2 ** attempt)
+            log.warning("[TG] 429 rate limit; retrying in %.1fs", wait)
+            time.sleep(wait)
+            last_err = f"429: {desc}"
+            continue
+
+        # Other 5xx are retried; non-429 4xx surfaces immediately.
+        if 500 <= r.status_code < 600:
+            sleep_for = backoff_base * (2 ** attempt)
+            log.warning("[TG] %d on attempt=%d/%d: %s — retry in %.1fs",
+                        r.status_code, attempt + 1, max_attempts, desc, sleep_for)
+            time.sleep(sleep_for)
+            last_err = f"{r.status_code}: {desc}"
+            continue
+
         raise RuntimeError(f"Telegram {r.status_code}: {desc}")
+
+    raise RuntimeError(f"Telegram failed after {max_attempts} attempts: {last_err}")
 
 
 def format_alert(
@@ -1299,6 +1394,7 @@ def process_watch(
         raw_sample=stats.sample_size,
         match_type="global",
         iqr_relative=global_stats.get("iqr_relative"),
+        source_diversity=global_stats.get("source_diversity") or 1,
     )
     stats.reliability_score = g_reliability
     g_val_str = f"{stats.market_value}€" if stats.market_value is not None else "—"
@@ -1629,12 +1725,22 @@ def _watch_match_score(title_norm: str, watch: Dict) -> int:
     return hits * 5
 
 
-def find_best_watch_for_title(title: str, config: Dict) -> Optional[Dict]:
-    """Return the watchlist that best matches `title`, or None if no overlap."""
+def find_best_watch_for_title(title: str, config: Dict, brand: Optional[str] = None) -> Optional[Dict]:
+    """Return the watchlist that best matches `title`, or None if no overlap.
+
+    `brand` (optional) is used as a tiebreaker — when two watchlists score
+    the same on title alone, the one whose name/keywords mention the brand
+    wins.
+    """
     norm = normalize(title)
+    brand_norm = normalize(brand) if brand else None
     best, best_score = None, 0
     for w in config.get("watchlists", []):
         score = _watch_match_score(norm, w)
+        if brand_norm and score > 0:
+            haystack = normalize(w.get("name", "") + " " + " ".join(w.get("keywords", [])))
+            if brand_norm in haystack:
+                score += 3   # small bump
         if score > best_score:
             best, best_score = w, score
     return best if best_score > 0 else None
@@ -1672,7 +1778,7 @@ def evaluate_listing_via_api(
             "condition": "unknown",
         }
 
-    watch = find_best_watch_for_title(title, config)
+    watch = find_best_watch_for_title(title, config, brand=payload.get("brand"))
     if watch is None:
         return {
             "verdict": "unreliable",

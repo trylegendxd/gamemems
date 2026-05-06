@@ -30,14 +30,12 @@ with open(os.path.join(os.path.dirname(__file__), "..", "config.yml"),
           encoding="utf-8") as f:
     _cfg = yaml.safe_load(f)
 _target_watch = next(w for w in _cfg["watchlists"] if w["name"] == "RTX 3060")
+_prices = [200, 205, 208, 210, 212, 215, 220, 222, 224, 228, 232, 240]
+_sources = ["OLX"] * 8 + ["CustoJusto"] * 4
 _market_data = {
-    "global": pricing.build_market_stats(
-        [200, 205, 208, 210, 212, 215, 220, 222, 224, 228, 232, 240], {},
-    ),
+    "global": pricing.build_market_stats(_prices, {}, sources=_sources),
     "by_model": {
-        "rtx 3060": pricing.build_market_stats(
-            [200, 205, 208, 210, 212, 215, 220, 222, 224, 228, 232, 240], {},
-        )
+        "rtx 3060": pricing.build_market_stats(_prices, {}, sources=_sources),
     },
     "raw_count": 12,
     "filter_dropped": {"keyword": 0, "blacklist": 0, "damage": 0, "bundle": 0, "no_price": 0},
@@ -87,6 +85,7 @@ class TestApiEvaluate(unittest.TestCase):
                 "price": 140,
                 "condition": "like_new",
                 "location": "Braga",
+                "brand": "nvidia",
             },
             headers={"Authorization": "Bearer test-token-xyz"},
         )
@@ -97,6 +96,10 @@ class TestApiEvaluate(unittest.TestCase):
         self.assertIn("reliability_score", data)
         self.assertIn("filtered_sample_size", data)
         self.assertIsInstance(data["reasons"], list)
+        # New source-breakdown fields
+        self.assertIn("source_counts", data)
+        self.assertIn("source_diversity", data)
+        self.assertEqual(data["source_diversity"], 2)
 
     def test_overpriced_marked_bad(self):
         r = self.client.post(

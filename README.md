@@ -277,6 +277,21 @@ prefer raising `SCRAPER_INTERVAL_MINUTES` so each cycle doesn't pile up.
 
 ---
 
+## Multi-source market data
+
+`MarketplaceScraper` dispatches each URL to a registered marketplace
+adapter. Built-in adapters: **OLX** (`olx.pt`) and **CustoJusto**
+(`custojusto.pt`). Add another by writing a `scrape_<name>(self, url)`
+method on `MarketplaceScraper` and calling
+`MarketplaceScraper.register_source(label, predicate, parser_method_name)`
+near the other registrations in `bot.py`.
+
+Every scraped listing carries its `source` label. `build_market_stats`
+returns a `source_counts` dict and `source_diversity` integer so reliability
+can reward cross-source agreement (+0.05 for two distinct sources, +0.08
+for three or more — capped at 1.0). The `/api/evaluate` response includes
+both fields so the extension can show fonts breakdown.
+
 ## Pricing reliability
 
 The market median is now wrapped in reliability gates so a watchlist with

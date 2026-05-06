@@ -9,16 +9,44 @@ into the repo.
 
 ## What it does
 
-1. On every OLX listing detail page (URL contains `/d/anuncio/`):
-   - Reads the visible title, price, condition, and location.
-2. Calls `POST <BACKEND_URL>/api/evaluate` with `Authorization: Bearer <TOKEN>`.
-3. Renders an overlay card next to the price with:
+1. Activates on every `olx.pt` page; the SPA-aware loop kicks in whenever
+   the URL changes to a listing (`/d/anuncio/...`) — **no manual reload
+   needed**.
+2. Reads the visible title, price, condition, location, and a best-guess
+   brand keyword.
+3. Calls `POST <BACKEND_URL>/api/evaluate` with `Authorization: Bearer <TOKEN>`.
+4. Renders an overlay next to the price with:
    - Verdict (`good_deal` / `neutral` / `bad_deal` / `unreliable`).
    - Estimated market price (median).
    - Profit margin (%).
    - Reliability score (0..1).
-   - Sample size after filtering.
+   - Filtered sample / raw sample.
+   - Source breakdown (e.g. `OLX:8 · CustoJusto:4`).
    - Top reasons (max 5).
+
+### Lifecycle (why no reload is needed)
+
+The content script:
+- Patches `history.pushState`, `history.replaceState`, and listens for
+  `popstate`, dispatching a custom `olx-flip-locationchange` event so the
+  evaluator runs on every SPA navigation.
+- Runs a `MutationObserver` on `document.body` so it retries when OLX
+  hydrates the price/title late.
+- Debounces evaluations (250 ms) and throttles them (max ~1.25/s).
+- Aborts the in-flight `fetch` (via `AbortController`) when the URL
+  changes mid-request.
+- Caches per-URL completion so we don't refetch when OLX re-renders the
+  same listing.
+
+### Error overlay states
+
+| State                              | Trigger                         |
+|------------------------------------|---------------------------------|
+| ⚠️ Falta backend URL ou API token   | Popup never configured          |
+| ⚠️ Token inválido (401)            | Backend rejected the bearer     |
+| ⚠️ Backend desligou /api/evaluate  | `EXTENSION_API_TOKEN` not set on the server |
+| ⚠️ Erro de rede                    | DNS failure or timeout (10 s cap) |
+| ❓ Não consegui ler o anúncio       | Selectors missed for 6 s        |
 
 ## Installation (Chrome / Brave / Edge — Developer Mode)
 

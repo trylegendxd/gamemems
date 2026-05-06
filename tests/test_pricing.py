@@ -163,6 +163,49 @@ class TestEvaluate(unittest.TestCase):
         self.assertTrue(any("risco" in r.lower() for r in result["reasons"]))
 
 
+class TestSourceDiversity(unittest.TestCase):
+    def test_source_counts_in_stats(self):
+        prices = [200, 205, 210, 215, 220, 230, 240]
+        sources = ["OLX", "OLX", "OLX", "CustoJusto", "CustoJusto", "OLX", "OLX"]
+        stats = pricing.build_market_stats(prices, {}, sources=sources)
+        self.assertEqual(stats["source_counts"], {"OLX": 5, "CustoJusto": 2})
+        self.assertEqual(stats["source_diversity"], 2)
+
+    def test_source_diversity_boosts_reliability(self):
+        single = pricing.compute_reliability(
+            filtered_sample=10, raw_sample=12, match_type="exact",
+            source_diversity=1,
+        )
+        diverse = pricing.compute_reliability(
+            filtered_sample=10, raw_sample=12, match_type="exact",
+            source_diversity=2,
+        )
+        very_diverse = pricing.compute_reliability(
+            filtered_sample=10, raw_sample=12, match_type="exact",
+            source_diversity=3,
+        )
+        self.assertGreater(diverse, single)
+        self.assertGreaterEqual(very_diverse, diverse)
+        self.assertLessEqual(very_diverse, 1.0)
+
+    def test_evaluate_includes_source_breakdown(self):
+        prices = [200, 205, 208, 210, 212, 215, 220, 222, 224, 228, 232, 240]
+        sources = ["OLX"] * 8 + ["CustoJusto"] * 4
+        market = pricing.build_market_stats(prices, {}, sources=sources)
+        market["_match"] = "exact:rtx 3060"
+        result = pricing.evaluate_listing(
+            listing={"title": "RTX 3060", "price": 140, "url": "x"},
+            market=market,
+            settings={"min_sample_size": 8, "min_filtered_sample_size": 5,
+                      "min_reliability_score": 0.5,
+                      "min_margin_percent": 20, "min_profit_eur": 25},
+        )
+        self.assertIn("source_counts", result)
+        self.assertIn("source_diversity", result)
+        self.assertEqual(result["source_diversity"], 2)
+        self.assertEqual(sum(result["source_counts"].values()), 12)
+
+
 class TestDedupeBySignature(unittest.TestCase):
     def test_dedupe_by_url(self):
         items = [

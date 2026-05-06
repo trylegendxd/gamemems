@@ -90,8 +90,26 @@ def create_app() -> Flask:
     # ── Auth helpers ─────────────────────────────────────────────────────────
     DASHBOARD_USER = os.getenv("DASHBOARD_USER", "admin")
     DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "")
+    DASHBOARD_PASSWORD_HASH = os.getenv("DASHBOARD_PASSWORD_HASH", "").strip()
     LOGIN_RATELIMIT: Dict[str, List[float]] = {}
     LOGIN_RL_LOCK = threading.Lock()
+
+    def _password_matches(submitted: str) -> bool:
+        """Verify password against the configured credential.
+
+        Priority:
+          1. DASHBOARD_PASSWORD_HASH (Werkzeug `pbkdf2:` / `scrypt:` format).
+          2. DASHBOARD_PASSWORD plaintext, compared with constant-time equals.
+        """
+        if DASHBOARD_PASSWORD_HASH:
+            try:
+                return check_password_hash(DASHBOARD_PASSWORD_HASH, submitted)
+            except Exception as e:
+                log.warning("password hash check failed: %s", e)
+                return False
+        if not DASHBOARD_PASSWORD:
+            return False
+        return secrets.compare_digest(submitted, DASHBOARD_PASSWORD)
 
     def is_authenticated() -> bool:
         return session.get("user") == DASHBOARD_USER
@@ -159,9 +177,9 @@ def create_app() -> Flask:
             else:
                 user = request.form.get("username", "").strip()
                 pw   = request.form.get("password", "")
-                if not DASHBOARD_PASSWORD:
+                if not DASHBOARD_PASSWORD and not DASHBOARD_PASSWORD_HASH:
                     error = "DASHBOARD_PASSWORD não está configurada no servidor."
-                elif user == DASHBOARD_USER and pw == DASHBOARD_PASSWORD:
+                elif user == DASHBOARD_USER and _password_matches(pw):
                     session.clear()
                     session["user"] = user
                     session.permanent = True
@@ -439,6 +457,7 @@ def create_app() -> Flask:
                 "condition": body.get("condition", "unknown"),
                 "category": body.get("category"),
                 "location": body.get("location"),
+                "brand": body.get("brand"),
             },
             config=cfg,
             market_cache=market_cache,
