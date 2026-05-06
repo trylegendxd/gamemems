@@ -242,7 +242,10 @@ def _extract_macbook_model(t: str) -> Optional[str]:
     "macbook air m2 13 256gb" -> "macbook air m2 13 256gb"
     "macbook pro 14 m3 1tb"   -> "macbook pro m3 14 1tb"
     """
-    m = re.search(r"macbook\s+(air|pro)\s*(\d{2})?\s*(m\d)?", t)
+    # Constrain size to actual MacBook screen sizes (13/14/15/16). The
+    # broader `\d{2}` was previously grabbing "20" from "MacBook Air 2020"
+    # and producing keys like "macbook air 20".
+    m = re.search(r"macbook\s+(air|pro)\s*(13|14|15|16)?\s*(m\d)?", t)
     if not m:
         return None
     variant = m.group(1)
@@ -1191,6 +1194,18 @@ def _build_market_stats(prices: List[float], iqr_mult: float = 1.0,
     )
 
 
+def _watchlist_describes_bundle(keywords: List[str]) -> bool:
+    """A watchlist whose keywords span ≥2 bundle categories (e.g.
+    ["i7", "rtx"]) is intentionally tracking a multi-component product like
+    a gaming laptop or pre-built PC. The bundle filter would otherwise
+    discard every relevant listing because the listing legitimately mentions
+    both a CPU and a GPU.
+    """
+    blob = normalize(" ".join(keywords))
+    hits = sum(1 for pat in _BUNDLE_CATEGORIES.values() if pat.search(blob))
+    return hits >= 2
+
+
 def estimate_market_value(
     scraper: MarketplaceScraper,
     reference_urls: List[str],
@@ -1198,6 +1213,7 @@ def estimate_market_value(
     keywords: List[str],
     blacklist: List[str],
     config: Optional[Dict] = None,
+    allow_bundles: bool = False,
 ) -> Dict:
     """
     Returns a market dict with two levels:
@@ -1219,6 +1235,14 @@ def estimate_market_value(
     mad_threshold = cfg_settings.get("outlier_mad_threshold", 3.5)
     exclude_bundles = cfg_settings.get("exclude_bundle_listings", True)
     apply_damage_filter = cfg_settings.get("filter_damaged_market_refs", True)
+
+    # If the watchlist itself describes a multi-component product (e.g. a
+    # gaming laptop matched on ["i7", "rtx"]) the bundle filter would
+    # discard every legit listing. Auto-detect and bypass.
+    if exclude_bundles and not allow_bundles and _watchlist_describes_bundle(keywords):
+        log.info("[MARKET] watchlist looks multi-component (keywords=%s) — "
+                 "disabling bundle filter for this run", keywords)
+        exclude_bundles = False
 
     unique_refs = [u for u in reference_urls if u not in search_urls]
     all_ref_urls = search_urls + unique_refs
@@ -1646,6 +1670,7 @@ def process_watch(
             watch["keywords"],
             blacklist,
             config=config,
+            allow_bundles=bool(watch.get("allow_bundles", False)),
         )
         if market_cache is not None and market_cache_lock is not None:
             with market_cache_lock:
@@ -2075,6 +2100,7 @@ def evaluate_listing_via_api(
             watch["keywords"],
             combined_blacklist(config, watch),
             config=config,
+            allow_bundles=bool(watch.get("allow_bundles", False)),
         )
         market_cache[cache_key] = {
             "market": market,

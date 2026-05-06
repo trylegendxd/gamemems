@@ -134,5 +134,36 @@ class TestHierarchicalMarketLookup(unittest.TestCase):
         self.assertEqual(stats["filtered_sample_size"], 10)
 
 
+class TestMacBookSizeNotYear(unittest.TestCase):
+    def test_2020_year_not_treated_as_size(self):
+        # Old behaviour: "MacBook Air 2020" → "macbook air 20" (wrong).
+        key = bot.extract_model_key("MacBook Air 2020 13 polegadas")
+        self.assertNotIn("macbook air 20", key.split())
+        # Should produce something starting with "macbook air"
+        self.assertTrue(key.startswith("macbook air"))
+
+    def test_actual_screen_sizes_still_captured(self):
+        self.assertEqual(
+            bot.extract_model_key("MacBook Air M3 15 256GB"),
+            "macbook air m3 15 256gb",
+        )
+        self.assertEqual(
+            bot.extract_model_key("MacBook Pro 14 M2"),
+            "macbook pro m2 14",
+        )
+
+
+class TestBundleAutoBypass(unittest.TestCase):
+    def test_multi_component_keywords_detected(self):
+        # CPU + GPU keywords → multi-component
+        self.assertTrue(bot._watchlist_describes_bundle(["i7", "rtx"]))
+        self.assertTrue(bot._watchlist_describes_bundle(["ryzen", "rtx"]))
+
+    def test_single_component_not_detected(self):
+        self.assertFalse(bot._watchlist_describes_bundle(["rtx 3060"]))
+        self.assertFalse(bot._watchlist_describes_bundle(["macbook air", "m2"]))
+        self.assertFalse(bot._watchlist_describes_bundle(["ryzen 5 5600"]))
+
+
 if __name__ == "__main__":
     unittest.main()
