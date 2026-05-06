@@ -32,7 +32,7 @@ DAMAGE_KEYWORDS: Tuple[str, ...] = (
     "partido", "partida", "quebrado", "quebrada",
     "defeito", "defeituoso", "defeituosa",
     "estragado", "estragada", "danificado", "danificada",
-    "para peças", "para pecas", "peças", "pecas",
+    "para peças", "para pecas",
     "reparar", "reparação", "reparacao", "para reparação",
     "não funciona", "nao funciona", "não liga", "nao liga",
     "sem garantia", "garantia não", "garantia nao",
@@ -316,6 +316,18 @@ def build_market_stats(
             "source_diversity": len(src_counts_raw),
         }
     med = statistics.median(trimmed)
+
+    # Second-pass low-tail guard: in broad marketplaces, suspiciously cheap
+    # listings (often broken/scam/bundle remnants) can survive pure IQR/MAD
+    # trimming and drag the observed floor unrealistically low. When we have
+    # enough points, trim values far below the median.
+    low_tail_ratio = float(settings.get("min_price_ratio_to_median", 0.35))
+    if len(trimmed) >= 8 and med >= 50 and low_tail_ratio > 0:
+        guarded = [p for p in trimmed if p >= med * low_tail_ratio]
+        if guarded:
+            trimmed = guarded
+            med = statistics.median(trimmed)
+
     iqr_rel: Optional[float] = None
     if len(trimmed) >= 5 and med > 0:
         q1, _, q3 = statistics.quantiles(trimmed, n=4)

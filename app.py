@@ -137,19 +137,38 @@ def create_app() -> Flask:
 
     # ── Health (public) ──────────────────────────────────────────────────────
     started_at = time.time()
+    last_db_ok_at = started_at
 
     @app.route("/health")
     @app.route("/api/health")
     def health():
+        nonlocal last_db_ok_at
         runner = scraper_mod.get_runner()
         sstatus = runner.get_status() if runner else {"status": "disabled"}
-        # DB ping
-        try:
-            db.stats_summary()
+
+        # DB ping with brief retries to smooth over transient TLS/socket hiccups
+        # that can happen during worker boot or connection churn.
+        db_ok = False
+        db_error = None
+        for attempt in range(3):
+            try:
+                db.stats_summary()
+                db_ok = True
+                last_db_ok_at = time.time()
+                break
+            except Exception as e:
+                db_error = e
+                if attempt < 2:
+                    time.sleep(0.15 * (attempt + 1))
+
+        # Grace window: if DB was recently healthy, don't flap health checks to
+        # 503 on a single transient read failure.
+        if not db_ok and (time.time() - last_db_ok_at) <= 60:
+            log.warning("DB health transient failure (grace period): %s", db_error)
             db_ok = True
-        except Exception as e:
-            db_ok = False
-            log.warning("DB health check failed: %s", e)
+        elif not db_ok:
+            log.warning("DB health check failed after retries: %s", db_error)
+
         body = {
             "status": "ok" if db_ok else "degraded",
             "uptime_seconds": int(time.time() - started_at),
