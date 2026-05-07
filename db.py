@@ -583,3 +583,17 @@ def distinct_categories() -> List[str]:
             select(Deal.category).where(Deal.category.isnot(None)).distinct()
         ).scalars()
         return sorted(set(r for r in rows if r))
+
+
+def clear_all_listings() -> dict:
+        """
+            Hard-delete ALL rows from both `deals` and `seen_listings`.
+                Used by the Limpar Anuncios admin action so the next scan starts fresh.
+                    Returns {"deals": <int>, "seen_listings": <int>}.
+                        """
+        with session_scope() as s:
+                    deals_count = s.scalar(select(func.count(Deal.id))) or 0
+                    seen_count = s.scalar(select(func.count(SeenListing.url_hash))) or 0
+                    s.execute(Deal.__table__.delete())
+                    s.execute(SeenListing.__table__.delete())
+                    return {"deals": int(deals_count), "seen_listings": int(seen_count)}
