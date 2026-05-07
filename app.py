@@ -1,574 +1,90 @@
-"""
-Flask web dashboard for the OLX Flip Bot.
+# ──────────────────────────────────────────────────────────────────────────────
+# PATCH: adicionar ao ficheiro app.py, dentro da função create_app(),
+#        logo após o bloco do endpoint  POST /api/scraper/run-now
+# ──────────────────────────────────────────────────────────────────────────────
 
-Endpoints:
-  GET  /                       Login or redirect to dashboard.
-  GET  /login                  Login form.
-  POST /login                  Submit credentials.
-  GET  /logout                 Clear session.
-  GET  /dashboard              Server-rendered dashboard.
-  GET  /deals/<id>             Server-rendered deal detail page.
-
-  GET  /health                 Public health probe (Render).
-  GET  /api/health             Public detailed health probe.
-  GET  /api/deals              List deals with filters/sorting.
-  GET  /api/deals/<id>         Single deal.
-  POST /api/deals              Manual insert (rare; used for tests).
-  PATCH /api/deals/<id>        Update favorite/contacted/ignored/archived/seen/notes.
-  DELETE /api/deals/<id>       Soft-delete (archive).
-  POST /api/deals/<id>/send-telegram   Re-send a deal to Telegram.
-  GET  /api/stats              Aggregate dashboard stats.
-  GET  /api/scraper/status     Scraper state (last run, errors, counters).
-  POST /api/scraper/run-now    Trigger a scan immediately.
-  GET  /api/deals.csv          CSV export.
-
-Authentication is a simple username/password against env vars
-DASHBOARD_USER / DASHBOARD_PASSWORD with sessions signed by SESSION_SECRET.
-All routes except /health and /api/health require auth.
-"""
-from __future__ import annotations
-
-import csv
-import io
-import logging
-import os
-import secrets
-import signal
-import sys
-import threading
-import time
-from datetime import datetime, timedelta, timezone
-from functools import wraps
-from typing import Any, Dict, List, Optional, Tuple
-
-from dotenv import load_dotenv
-from flask import (
-    Flask, Response, abort, g, jsonify, make_response, redirect, render_template,
-    request, send_from_directory, session, url_for,
-)
-from werkzeug.security import check_password_hash, generate_password_hash
-
-# Make stdout UTF-8 (Render logs are fine, but Windows dev consoles aren't).
-try:
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-except (AttributeError, ValueError):
-    pass
-
-load_dotenv()
-
-import db
-import scraper as scraper_mod
-import bot as bot_module
-import yaml
-
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-log = logging.getLogger("app")
-
-
-def create_app() -> Flask:
-    app = Flask(
-        __name__,
-        static_folder="static",
-        template_folder="templates",
-    )
-    app.config["SECRET_KEY"] = os.getenv("SESSION_SECRET") or secrets.token_hex(32)
-    app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    if os.getenv("NODE_ENV", os.getenv("FLASK_ENV", "")) == "production":
-        app.config["SESSION_COOKIE_SECURE"] = True
-
-    # ── Initialize DB ────────────────────────────────────────────────────────
-    log.info("Database URL: %s", db.db_url_summary())
-    db.init_db()
-    log.info("Database tables ready (postgres=%s)", db.is_postgres())
-
-    # ── Auth helpers ─────────────────────────────────────────────────────────
-    DASHBOARD_USER = os.getenv("DASHBOARD_USER", "admin")
-    DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "")
-    DASHBOARD_PASSWORD_HASH = os.getenv("DASHBOARD_PASSWORD_HASH", "").strip()
-    LOGIN_RATELIMIT: Dict[str, List[float]] = {}
-    LOGIN_RL_LOCK = threading.Lock()
-
-    def _password_matches(submitted: str) -> bool:
-        """Verify password against the configured credential.
-
-        Priority:
-          1. DASHBOARD_PASSWORD_HASH (Werkzeug `pbkdf2:` / `scrypt:` format).
-          2. DASHBOARD_PASSWORD plaintext, compared with constant-time equals.
+    @app.route("/api/admin/limpar-anuncios", methods=["POST"])
+    @require_auth
+    def api_limpar_anuncios():
         """
-        if DASHBOARD_PASSWORD_HASH:
-            try:
-                return check_password_hash(DASHBOARD_PASSWORD_HASH, submitted)
-            except Exception as e:
-                log.warning("password hash check failed: %s", e)
-                return False
-        if not DASHBOARD_PASSWORD:
-            return False
-        return secrets.compare_digest(submitted, DASHBOARD_PASSWORD)
+        Admin action: reset all listing data so the next scan starts fresh.
 
-    def is_authenticated() -> bool:
-        return session.get("user") == DASHBOARD_USER
+        Steps
+        -----
+        1. Reject the request if a scan is currently running (race-condition
+           guard).
+        2. Hard-delete every row in `deals` and `seen_listings` (DB).
+        3. Reset `data/seen.json` and `data/market_cache.json` to `{}`.
+        4. Return a JSON summary with counts and a timestamp.
 
-    def require_auth(view):
-        @wraps(view)
-        def wrapped(*args, **kwargs):
-            if not is_authenticated():
-                if request.path.startswith("/api/"):
-                    return jsonify({"error": "unauthorized"}), 401
-                return redirect(url_for("login", next=request.path))
-            return view(*args, **kwargs)
-        return wrapped
-
-    def is_rate_limited(ip: str, max_attempts: int = 5, window_seconds: int = 300) -> bool:
-        now = time.time()
-        with LOGIN_RL_LOCK:
-            attempts = [t for t in LOGIN_RATELIMIT.get(ip, []) if now - t < window_seconds]
-            LOGIN_RATELIMIT[ip] = attempts
-            return len(attempts) >= max_attempts
-
-    def record_login_attempt(ip: str):
-        with LOGIN_RL_LOCK:
-            LOGIN_RATELIMIT.setdefault(ip, []).append(time.time())
-
-    # ── Health (public) ──────────────────────────────────────────────────────
-    started_at = time.time()
-    last_db_ok_at = started_at
-
-    @app.route("/health")
-    @app.route("/api/health")
-    def health():
-        nonlocal last_db_ok_at
-        runner = scraper_mod.get_runner()
-        sstatus = runner.get_status() if runner else {"status": "disabled"}
-
-        # DB ping with brief retries to smooth over transient TLS/socket hiccups
-        # that can happen during worker boot or connection churn.
-        db_ok = False
-        db_error = None
-        for attempt in range(3):
-            try:
-                db.stats_summary()
-                db_ok = True
-                last_db_ok_at = time.time()
-                break
-            except Exception as e:
-                db_error = e
-                if attempt < 2:
-                    time.sleep(0.15 * (attempt + 1))
-
-        # Grace window: if DB was recently healthy, don't flap health checks to
-        # 503 on a single transient read failure.
-        if not db_ok and (time.time() - last_db_ok_at) <= 60:
-            log.warning("DB health transient failure (grace period): %s", db_error)
-            db_ok = True
-        elif not db_ok:
-            log.warning("DB health check failed after retries: %s", db_error)
-
-        body = {
-            "status": "ok" if db_ok else "degraded",
-            "uptime_seconds": int(time.time() - started_at),
-            "database": "ok" if db_ok else "error",
-            "database_kind": "postgres" if db.is_postgres() else "sqlite",
-            "scraper": sstatus,
-            "version": "2.0",
-        }
-        return jsonify(body), (200 if db_ok else 503)
-
-    # ── Auth pages ───────────────────────────────────────────────────────────
-    @app.route("/")
-    def index():
-        if is_authenticated():
-            return redirect(url_for("dashboard"))
-        return redirect(url_for("login"))
-
-    @app.route("/login", methods=["GET", "POST"])
-    def login():
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
-        error = None
-        if request.method == "POST":
-            if is_rate_limited(ip):
-                error = "Demasiadas tentativas. Tenta novamente em alguns minutos."
-            else:
-                user = request.form.get("username", "").strip()
-                pw   = request.form.get("password", "")
-                if not DASHBOARD_PASSWORD and not DASHBOARD_PASSWORD_HASH:
-                    error = "DASHBOARD_PASSWORD não está configurada no servidor."
-                elif user == DASHBOARD_USER and _password_matches(pw):
-                    session.clear()
-                    session["user"] = user
-                    session.permanent = True
-                    app.permanent_session_lifetime = timedelta(days=30)
-                    nxt = request.args.get("next") or url_for("dashboard")
-                    return redirect(nxt)
-                else:
-                    record_login_attempt(ip)
-                    error = "Credenciais inválidas."
-        return render_template("login.html", error=error)
-
-    @app.route("/logout")
-    def logout():
-        session.clear()
-        return redirect(url_for("login"))
-
-    # ── Dashboard pages ──────────────────────────────────────────────────────
-    @app.route("/dashboard")
-    @require_auth
-    def dashboard():
-        categories = db.distinct_categories()
-        return render_template("dashboard.html", categories=categories)
-
-    @app.route("/deals/<int:deal_id>")
-    @require_auth
-    def deal_detail(deal_id: int):
-        deal = db.get_deal(deal_id)
-        if deal is None:
-            abort(404)
-        # Mark seen on view
-        db.update_deal(deal_id, {"seen": True})
-        deal["seen"] = True
-        return render_template("deal_detail.html", deal=deal)
-
-    # ── API: deals ───────────────────────────────────────────────────────────
-    def _bool_arg(name: str, default: bool = False) -> bool:
-        v = request.args.get(name)
-        if v is None:
-            return default
-        return v.lower() in ("1", "true", "yes", "on")
-
-    def _float_arg(name: str) -> Optional[float]:
-        v = request.args.get(name)
-        if v in (None, ""):
-            return None
-        try:
-            return float(v)
-        except ValueError:
-            return None
-
-    def _int_arg(name: str, default: int, *, min_value: int = 0, max_value: Optional[int] = None):
-        v = request.args.get(name)
-        if v in (None, ""):
-            return default
-        try:
-            n = int(v)
-        except ValueError:
-            return None
-        if n < min_value:
-            return None
-        if max_value is not None and n > max_value:
-            n = max_value
-        return n
-
-    @app.route("/api/deals")
-    @require_auth
-    def api_list_deals():
-        limit = _int_arg("limit", 200, min_value=1, max_value=500)
-        offset = _int_arg("offset", 0, min_value=0)
-        if limit is None:
-            return jsonify({"error": "invalid limit; must be a non-negative integer"}), 400
-        if offset is None:
-            return jsonify({"error": "invalid offset; must be a non-negative integer"}), 400
-        deals = db.list_deals(
-            search=request.args.get("search") or None,
-            category=request.args.get("category") or None,
-            min_profit_percent=_float_arg("min_profit_percent"),
-            min_profit=_float_arg("min_profit"),
-            location=request.args.get("location") or None,
-            only_unseen=_bool_arg("only_unseen"),
-            only_favorites=_bool_arg("only_favorites"),
-            hide_risky=_bool_arg("hide_risky"),
-            hide_ignored=_bool_arg("hide_ignored", default=True),
-            hide_archived=_bool_arg("hide_archived", default=True),
-            sort=request.args.get("sort", "newest"),
-            limit=limit,
-            offset=offset,
-        )
-        return jsonify({"deals": deals, "count": len(deals), "limit": limit, "offset": offset})
-
-    @app.route("/api/deals/<int:deal_id>")
-    @require_auth
-    def api_get_deal(deal_id: int):
-        deal = db.get_deal(deal_id)
-        if deal is None:
-            return jsonify({"error": "not_found"}), 404
-        return jsonify(deal)
-
-    @app.route("/api/deals", methods=["POST"])
-    @require_auth
-    def api_create_deal():
-        body = request.get_json(silent=True) or {}
-        if not body.get("url") or not body.get("title"):
-            return jsonify({"error": "url and title are required"}), 400
-        saved = db.upsert_deal(body)
-        return jsonify(saved), (201 if saved.get("_was_inserted") else 200)
-
-    @app.route("/api/deals/<int:deal_id>", methods=["PATCH"])
-    @require_auth
-    def api_update_deal(deal_id: int):
-        body = request.get_json(silent=True) or {}
-        updated = db.update_deal(deal_id, body)
-        if updated is None:
-            return jsonify({"error": "not_found"}), 404
-        return jsonify(updated)
-
-    @app.route("/api/deals/<int:deal_id>", methods=["DELETE"])
-    @require_auth
-    def api_delete_deal(deal_id: int):
-        ok = db.delete_deal(deal_id)
-        if not ok:
-            return jsonify({"error": "not_found"}), 404
-        return jsonify({"archived": True})
-
-    @app.route("/api/deals/<int:deal_id>/send-telegram", methods=["POST"])
-    @require_auth
-    def api_send_telegram(deal_id: int):
-        deal = db.get_deal(deal_id)
-        if deal is None:
-            return jsonify({"error": "not_found"}), 404
-        token = os.getenv("TELEGRAM_BOT_TOKEN")
-        chat_id = os.getenv("TELEGRAM_CHAT_ID")
-        if not token or not chat_id:
-            return jsonify({"error": "telegram_not_configured"}), 400
-        base_url = os.getenv("BASE_URL", "").rstrip("/")
-        msg = (
-            f"🔁 Re-enviado do dashboard\n\n"
-            f"Categoria: {deal.get('category') or '-'}\n"
-            f"Artigo: {deal.get('title')}\n"
-            f"Preço do vendedor: {deal.get('price'):.0f}€\n"
-            if deal.get('price') is not None else
-            f"🔁 Re-enviado do dashboard\n\nArtigo: {deal.get('title')}\n"
-        )
-        if deal.get('estimated_value') is not None:
-            msg += f"Mediana de mercado: {deal['estimated_value']:.0f}€\n"
-        if deal.get('profit') is not None:
-            msg += f"Lucro estimado: {deal['profit']:.0f}€\n"
-        if deal.get('profit_percent') is not None:
-            msg += f"Margem: {deal['profit_percent']}%\n"
-        if deal.get('location'):
-            msg += f"Localização: {deal['location']}\n"
-        msg += f"\n{deal.get('url')}"
-        if base_url:
-            msg += f"\nDashboard: {base_url}/deals/{deal_id}"
-        try:
-            bot_module.send_telegram(token, chat_id, msg)
-            db.mark_telegram_sent(deal["url_hash"])
-            return jsonify({"sent": True})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 502
-
-    # ── API: stats / scraper ─────────────────────────────────────────────────
-    @app.route("/api/stats")
-    @require_auth
-    def api_stats():
-        s = db.stats_summary()
-        runner = scraper_mod.get_runner()
-        s["scraper"] = runner.get_status() if runner else {"status": "disabled"}
-        return jsonify(s)
-
-    @app.route("/api/scraper/status")
-    @require_auth
-    def api_scraper_status():
-        runner = scraper_mod.get_runner()
-        if runner is None:
-            return jsonify({"status": "disabled"}), 200
-        return jsonify(runner.get_status())
-
-    @app.route("/api/scraper/run-now", methods=["POST"])
-    @require_auth
-    def api_scraper_run_now():
-        runner = scraper_mod.get_runner()
-        if runner is None:
-            return jsonify({"error": "scraper_disabled"}), 400
-        triggered = runner.trigger_now()
-        return jsonify({"triggered": triggered, "status": runner.get_status()})
-
-    # ── /api/evaluate (browser extension) ────────────────────────────────────
-    EXT_TOKEN = os.getenv("EXTENSION_API_TOKEN", "").strip()
-    EXT_ORIGIN = os.getenv("EXTENSION_ALLOWED_ORIGIN", "").strip()
-    EXT_LIVE_FETCH = os.getenv("EXTENSION_LIVE_FETCH", "false").lower() in ("1", "true", "yes")
-
-    def _extract_bearer_token() -> Optional[str]:
-        """Token may arrive as `Authorization: Bearer X` or `X-API-Token: X`."""
-        auth = request.headers.get("Authorization", "")
-        if auth.lower().startswith("bearer "):
-            return auth[7:].strip()
-        return request.headers.get("X-API-Token", "").strip() or None
-
-    def _apply_cors(resp):
-        """Attach CORS headers when EXTENSION_ALLOWED_ORIGIN is configured.
-
-        We only echo back an origin we trust; we never use a wildcard so the
-        token isn't readable cross-site by accident.
+        Authentication: same session-cookie auth as all other API endpoints.
+        Additional guard: requires the header  X-Confirm-Action: limpar
+        to prevent accidents from mis-clicks.
         """
-        if not EXT_ORIGIN:
-            return resp
-        origin = request.headers.get("Origin", "")
-        allowed = [o.strip() for o in EXT_ORIGIN.split(",") if o.strip()]
-        if origin and (origin in allowed or "*" in allowed):
-            resp.headers["Access-Control-Allow-Origin"] = origin
-            resp.headers["Vary"] = "Origin"
-            resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-            resp.headers["Access-Control-Allow-Headers"] = "Authorization, X-API-Token, Content-Type"
-            resp.headers["Access-Control-Max-Age"] = "600"
-        return resp
+        # ── CSRF-style confirmation header ───────────────────────────────
+        confirm = request.headers.get("X-Confirm-Action", "")
+        if confirm != "limpar":
+            return jsonify({
+                "error": "missing_confirmation",
+                "detail": "Enviar header X-Confirm-Action: limpar para confirmar."
+            }), 400
 
-    @app.route("/api/evaluate", methods=["POST", "OPTIONS"])
-    def api_evaluate():
-        # CORS preflight
-        if request.method == "OPTIONS":
-            return _apply_cors(make_response("", 204))
+        # ── Refuse while a scan is in progress ───────────────────────────
+        current_runner = scraper_mod.get_runner()
+        if current_runner is not None:
+            status = current_runner.get_status()
+            if status.get("is_scraping"):
+                return jsonify({
+                    "error": "scan_in_progress",
+                    "detail": "Aguarda o fim do scan antes de limpar."
+                }), 409
 
-        if not EXT_TOKEN:
-            log.warning("/api/evaluate called but EXTENSION_API_TOKEN is not set")
-            return _apply_cors(jsonify({"error": "extension_disabled"})), 503
-
-        provided = _extract_bearer_token()
-        # secrets.compare_digest avoids timing leaks on the token value
-        if not provided or not secrets.compare_digest(provided, EXT_TOKEN):
-            return _apply_cors(jsonify({"error": "unauthorized"})), 401
-
-        body = request.get_json(silent=True) or {}
-        title = (body.get("title") or "").strip()
-        url = (body.get("url") or "").strip()
-        price_raw = body.get("price")
-        if not title or not url:
-            return _apply_cors(jsonify({"error": "title and url are required"})), 400
-        try:
-            price = float(price_raw) if price_raw is not None else None
-        except (TypeError, ValueError):
-            return _apply_cors(jsonify({"error": "price must be a number"})), 400
-
-        # Lazy-load config + market_cache. Reload config.yml on each request so
-        # operators can edit it without restarting.
-        try:
-            with open(os.getenv("CONFIG_PATH", "config.yml"), "r", encoding="utf-8") as f:
-                cfg = yaml.safe_load(f)
-        except Exception as e:
-            log.exception("/api/evaluate failed to load config: %s", e)
-            return _apply_cors(jsonify({"error": "config_unavailable"})), 500
-
-        try:
-            market_cache = bot_module.load_market_cache()
-        except Exception as e:
-            log.warning("/api/evaluate: market cache load failed: %s", e)
-            market_cache = {}
-
-        scraper = None
-        if EXT_LIVE_FETCH:
-            scraper = bot_module.MarketplaceScraper.from_config(cfg)
-
-        # Log without leaking the token
-        log.info(
-            "[API-EVAL] title=%r price=%s url=%s origin=%s live_fetch=%s",
-            title[:80], price, url[:80], request.headers.get("Origin", "-"),
-            EXT_LIVE_FETCH,
+        started_at = datetime.now(timezone.utc).isoformat()
+        log.warning(
+            "[LIMPAR-ANUNCIOS] início — utilizador=%s ip=%s",
+            session.get("user", "?"),
+            request.remote_addr,
         )
 
-        result = bot_module.evaluate_listing_via_api(
-            payload={
-                "title": title,
-                "price": price,
-                "url": url,
-                "condition": body.get("condition", "unknown"),
-                "category": body.get("category"),
-                "location": body.get("location"),
-                "brand": body.get("brand"),
-            },
-            config=cfg,
-            market_cache=market_cache,
-            allow_live_fetch=EXT_LIVE_FETCH,
-            scraper=scraper,
-        )
-        return _apply_cors(jsonify(result))
-
-    # ── CSV export ───────────────────────────────────────────────────────────
-    @app.route("/api/deals.csv")
-    @require_auth
-    def api_deals_csv():
-        deals = db.list_deals(
-            hide_ignored=_bool_arg("hide_ignored", default=False),
-            hide_archived=_bool_arg("hide_archived", default=False),
-            limit=10000,
-        )
-        out = io.StringIO()
-        cols = [
-            "id", "title", "category", "price", "estimated_value",
-            "profit", "profit_percent", "location", "source",
-            "telegram_sent", "favorite", "contacted", "ignored", "archived",
-            "url", "image_url", "first_seen_at",
-        ]
-        w = csv.DictWriter(out, fieldnames=cols, extrasaction="ignore")
-        w.writeheader()
-        for d in deals:
-            w.writerow(d)
-        resp = make_response(out.getvalue())
-        resp.headers["Content-Type"] = "text/csv; charset=utf-8"
-        resp.headers["Content-Disposition"] = "attachment; filename=olx_deals.csv"
-        return resp
-
-    # ── Errors ───────────────────────────────────────────────────────────────
-    @app.errorhandler(404)
-    def not_found(e):
-        if request.path.startswith("/api/"):
-            return jsonify({"error": "not_found"}), 404
-        return render_template("error.html", code=404, message="Página não encontrada"), 404
-
-    @app.errorhandler(500)
-    def server_error(e):
-        if request.path.startswith("/api/"):
-            return jsonify({"error": "server_error"}), 500
-        return render_template("error.html", code=500, message="Erro interno"), 500
-
-    return app
-
-
-# ── Entry point ─────────────────────────────────────────────────────────────
-
-app = create_app()
-
-
-def _maybe_start_scraper():
-    """Start the scraper thread unless RUN_SCRAPER=false."""
-    if os.getenv("RUN_SCRAPER", "true").lower() in ("0", "false", "no"):
-        log.info("RUN_SCRAPER disabled — dashboard only")
-        return
-    interval = float(os.getenv("SCRAPER_INTERVAL_MINUTES", "10"))
-    scraper_mod.start_runner(
-        config_path=os.getenv("CONFIG_PATH", "config.yml"),
-        interval_minutes=interval,
-        run_on_startup=os.getenv("SCRAPER_RUN_ON_STARTUP", "true").lower() not in ("0", "false", "no"),
-    )
-
-
-def _install_signal_handlers():
-    def graceful_shutdown(signum, _frame):
-        log.info("signal %s received — shutting down", signum)
-        runner = scraper_mod.get_runner()
-        if runner:
-            runner.stop()
-        sys.exit(0)
-
-    for sig in (signal.SIGINT, signal.SIGTERM):
+        # ── 1. DB: hard-delete deals + seen_listings ──────────────────────
         try:
-            signal.signal(sig, graceful_shutdown)
-        except (ValueError, OSError):
-            # signal handlers can't be installed in non-main threads (e.g.
-            # when gunicorn forks workers). Gunicorn handles SIGTERM itself
-            # and the thread is daemon, so the OS will reap it on shutdown.
-            pass
+            db_counts = db.clear_all_listings()
+            log.info(
+                "[LIMPAR-ANUNCIOS] DB limpo — deals=%d  seen_listings=%d",
+                db_counts["deals"],
+                db_counts["seen_listings"],
+            )
+        except Exception as exc:
+            log.exception("[LIMPAR-ANUNCIOS] ERRO ao limpar DB: %s", exc)
+            return jsonify({"error": "db_error", "detail": str(exc)}), 500
 
+        # ── 2. Ficheiros locais: seen.json + market_cache.json ────────────
+        try:
+            file_result = bot_module.clear_local_caches()
+            log.info("[LIMPAR-ANUNCIOS] caches locais: %s", file_result)
+        except Exception as exc:
+            log.warning("[LIMPAR-ANUNCIOS] AVISO ao limpar caches: %s", exc)
+            file_result = {"error": str(exc)}
 
-# Start scraper as soon as the module is imported (gunicorn's preload-style).
-_install_signal_handlers()
-_maybe_start_scraper()
+        # ── 3. Reset contador de total_alerts/total_scans no runner ──────
+        #      (opcional mas melhora a legibilidade do status após limpeza)
+        if current_runner is not None:
+            with current_runner._state_lock:
+                current_runner.state["total_scans"]  = 0
+                current_runner.state["total_alerts"] = 0
+                current_runner.state["total_deals_found"] = 0
 
+        finished_at = datetime.now(timezone.utc).isoformat()
+        log.warning(
+            "[LIMPAR-ANUNCIOS] concluído — deals_removidos=%d  seen_removidos=%d",
+            db_counts["deals"],
+            db_counts["seen_listings"],
+        )
 
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", "3000"))
-    debug = os.getenv("FLASK_DEBUG", "0") == "1"
-    log.info("starting Flask dev server on 0.0.0.0:%d", port)
-    app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=False)
+        return jsonify({
+            "ok": True,
+            "started_at":  started_at,
+            "finished_at": finished_at,
+            "db": db_counts,
+            "local_caches": file_result,
+        })
